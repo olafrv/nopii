@@ -7,6 +7,22 @@ When you change the code, update the docs in the same task — don't leave them 
 - **`README.md`** — user-facing: setup, `ANTHROPIC_BASE_URL` usage, config table, deploy.
 - **`CLAUDE.md`** (this file) — architecture, invariants, commands, gotchas.
 - **`.env.example`** — add/rename/remove env vars here whenever you touch config.
+- **`README_PNPM.md`** — package-management & supply-chain-security policy (see below).
+
+## Package management — MANDATORY
+
+**This project uses pnpm, and [`README_PNPM.md`](./README_PNPM.md) is mandatory.**
+Every dependency or package-management change MUST comply with it:
+
+- Use **pnpm only** — never `npm`/`yarn`. There is **no `package-lock.json`**;
+  the lockfile is `pnpm-lock.yaml` and it is always committed.
+- Supply-chain controls in `pnpm-workspace.yaml` are required and must stay set:
+  `minimumReleaseAge`, `blockExoticSubdeps: true`, `trustPolicy: no-downgrade`,
+  `strictPeerDependencies: true`, `saveExact: true`.
+- Build scripts are blocked by default. Whitelist trusted packages in
+  `allowBuilds`; **never** use `dangerouslyAllowAllBuilds`.
+- Add deps with `pnpm add --save-exact`; install with `pnpm install --frozen-lockfile`.
+- When you change any of the above, update `README_PNPM.md` in the same task.
 
 Specifically: a new env var → update `.env.example` + the config tables; a new/moved
 file → update both layout tables; a changed invariant (token shape, redaction scope,
@@ -35,10 +51,11 @@ hook-based redaction design.
 ## Commands
 
 ```bash
-npm install                          # deps (Node >= 24 required)
-npm run dev                          # start with --watch + .env
-npm start                            # start (prod)
-npm test                             # GLiNER leak-check — REQUIRES model weights
+corepack enable                      # provides pnpm (version pinned in package.json)
+pnpm install --frozen-lockfile       # deps (Node >= 24 required)
+pnpm dev                             # start with --watch + .env
+pnpm start                           # start (prod)
+pnpm test                            # GLiNER leak-check — REQUIRES model weights
 node --test test/rehydrate.test.js   # rehydration logic — no model needed
 ```
 
