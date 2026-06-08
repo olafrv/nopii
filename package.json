@@ -1,0 +1,21 @@
+{
+  "name": "nopii-proxy",
+  "type": "module",
+  "version": "1.0.0",
+  "description": "Local/remote PII-redaction reverse proxy for the Anthropic Messages API (Claude Code via ANTHROPIC_BASE_URL)",
+  "main": "src/server.js",
+  "scripts": {
+    "dev": "node --env-file=.env --watch src/server.js",
+    "start": "node --env-file=.env src/server.js",
+    "test": "node --test test/leak-check.js"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@xenova/transformers": "^2.17.2",
+    "express": "^4.19.2",
+    "gliner": "^0.0.19"
+  }
+}

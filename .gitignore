@@ -1,0 +1,10 @@
+node_modules/
+.env
+*.log
+
+# Local tooling state
+.remember/
+
+# Model artifacts (not committed — see model/README.md)
+model/**/*.onnx
+model/.cache/
