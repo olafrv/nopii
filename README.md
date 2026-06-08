@@ -45,15 +45,19 @@ Requirements: **Node.js ≥ 24** and an Anthropic **API key** (the proxy works w
 `x-api-key` / `ANTHROPIC_API_KEY` auth).
 
 ```bash
-npm install
+corepack enable               # provides pnpm (version pinned in package.json)
+pnpm install --frozen-lockfile
 cp .env.example .env          # adjust if needed
 
 # Download the GLiNER ONNX weights into model/  (see model/README.md)
 #   -> model/gliner_medium-v2.1/onnx/model_fp16.onnx
 
-npm run dev                   # or: npm start
+pnpm dev                      # or: pnpm start
 # [nopii] proxy listening on http://localhost:8788 -> https://api.anthropic.com
 ```
+
+> This project uses **pnpm** with supply-chain-security controls — see
+> [README_PNPM.md](./README_PNPM.md). Use pnpm, not npm.
 
 ## Point Claude Code at it
 
@@ -105,7 +109,7 @@ You get a reply with the real name and email restored.
 ## Tests
 
 ```bash
-npm test                                   # GLiNER leak-check (needs the model)
+pnpm test                                  # GLiNER leak-check (needs the model)
 node --test test/rehydrate.test.js         # rehydration logic (no model needed)
 ```
 

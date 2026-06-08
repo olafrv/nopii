@@ -22,8 +22,8 @@ settings) and `.npmrc` (registry/auth only).
 ### 3. Blocked Build Scripts (`allowBuilds`)
 - pnpm does **not** run dependency lifecycle scripts (`postinstall`, etc.) by
   default — the most common malware execution vector.
-- Whitelist only the dependencies you trust to run build scripts via
-  `allowBuilds` in `pnpm-workspace.yaml`.
+- Whitelist only the dependencies you trust to run build scripts via the
+  `allowBuilds` **map** (`name: true|false`) in `pnpm-workspace.yaml`.
 - **Never** use `dangerouslyAllowAllBuilds` — it globally re-enables script
   execution for every package.
 
@@ -103,12 +103,19 @@ pnpm v11+ reads behavioral settings from YAML, not `.npmrc`. Settings used here:
 minimumReleaseAge: 10080
 blockExoticSubdeps: true
 trustPolicy: no-downgrade
+trustPolicyExclude:        # narrow, documented exceptions only
+  - 'protobufjs@6.11.6'
 strictPeerDependencies: true
 saveExact: true
-allowBuilds:
-  # list only dependencies you trust to run build scripts, e.g.:
-  # - some-native-addon
+allowBuilds:               # MAP of package -> allow(true)/disallow(false)
+  sharp: true              # builds its platform binding; imported via transformers
+  onnxruntime-node: false  # native binary ships prebuilt in the tarball
+  protobufjs: false        # build script not required
 ```
+
+> **Format note:** `allowBuilds` is an object **map** (`name: true|false`), not a
+> list. The legacy `onlyBuiltDependencies`/`neverBuiltDependencies` arrays were
+> removed in pnpm v11.
 
 ### `.nvmrc` — Node version
 - `nvm install && nvm use` for a consistent Node runtime.

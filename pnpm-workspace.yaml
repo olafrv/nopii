@@ -1,0 +1,24 @@
+# pnpm behavioral settings (pnpm v11+). See README_PNPM.md and
+# https://pnpm.io/supply-chain-security
+minimumReleaseAge: 10080        # quarantine packages published < 7 days ago
+blockExoticSubdeps: true        # no git/tarball-URL transitive deps
+trustPolicy: no-downgrade       # reject packages whose trust level dropped
+# Known exception: protobufjs@6.11.6 is an old transitive dep
+# (@xenova/transformers -> onnxruntime-web -> onnx-proto). The "downgrade" is a
+# publish-date artifact (this old release predates trusted-publisher evidence),
+# not an incident. Scoped to the exact version so the policy stays strict.
+trustPolicyExclude:
+  - 'protobufjs@6.11.6'
+strictPeerDependencies: true    # surface incompatible/missing peers
+saveExact: true                 # pin exact versions on `pnpm add`
+
+# Dependency build (postinstall) scripts are blocked by default. This is a map
+# of package -> allow(true)/disallow(false). onnxruntime-node ships its native
+# .node/.dylib prebuilt in the tarball (no build needed), and protobufjs's
+# script is not required. sharp@0.32.6 must build its platform binding
+# (imported at load via @xenova/transformers), so it is allowed.
+# Never use dangerouslyAllowAllBuilds.
+allowBuilds:
+  sharp: true
+  onnxruntime-node: false
+  protobufjs: false
