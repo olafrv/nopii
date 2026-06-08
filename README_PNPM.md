@@ -1,89 +1,120 @@
+# pnpm Supply-Chain Security
+
+This project follows the recommendations in
+[pnpm's Supply Chain Security guide](https://pnpm.io/supply-chain-security).
+The controls below are enforced via `pnpm-workspace.yaml` (pnpm behavioral
+settings) and `.npmrc` (registry/auth only).
+
 ## Security Measures
 
-### 1. **Locked Dependencies (pnpm-lock.yaml)**
-- Ensures reproducible installs across all environments
-- Prevents accidental version upgrades
-- Detects dependency confusion attacks
+### 1. Locked Dependencies (`pnpm-lock.yaml`)
+- Ensures reproducible installs across all environments.
+- Prevents accidental version upgrades.
+- Detects dependency-confusion attacks.
+- **Always commit it; never add to `.gitignore`.**
 
-### 2. **Automatic Security Audits**
-- Configure `audit: true` in `pnpm-workspace.yaml` (pnpm v11+) to check for known vulnerabilities on every install.
-- Run manually: `pnpm audit --audit-level=moderate`
+### 2. Minimum Release Age
+- `minimumReleaseAge: 10080` in `pnpm-workspace.yaml` blocks packages published
+  less than 7 days ago (pnpm v11+; the v11 default is `1440` = 1 day).
+- Protects against newly published, not-yet-detected supply-chain compromises.
+- Set to `0` to disable.
 
-### 3. **Minimum Release Age**
-- `minimumReleaseAge: 10080` in `pnpm-workspace.yaml` blocks packages released less than 7 days ago (pnpm v11+).
-- Helps protect against newly published supply-chain compromises
+### 3. Blocked Build Scripts (`allowBuilds`)
+- pnpm does **not** run dependency lifecycle scripts (`postinstall`, etc.) by
+  default — the most common malware execution vector.
+- Whitelist only the dependencies you trust to run build scripts via
+  `allowBuilds` in `pnpm-workspace.yaml`.
+- **Never** use `dangerouslyAllowAllBuilds` — it globally re-enables script
+  execution for every package.
 
-### 4. **HTTPS Registry Only**
-- Prevents man-in-the-middle attacks
-- Configured in `.npmrc`: `registry=https://registry.npmjs.org/`
+### 4. Block Exotic Sub-Dependencies (`blockExoticSubdeps`)
+- `blockExoticSubdeps: true` prevents transitive dependencies from resolving to
+  git repositories or direct tarball URLs, which bypass the registry and its
+  integrity checks.
 
-### 4. **Strict Peer Dependencies**
-- `strict-peer-dependencies=true` prevents version conflicts
-- Ensures compatibility across the dependency tree
+### 5. Trust Policy (`trustPolicy`)
+- `trustPolicy: no-downgrade` refuses a package whose trust level (signature /
+  provenance) has decreased compared to a previous release.
+- `trustPolicyExclude` — allow specific packages/versions to bypass the check.
+- `trustPolicyIgnoreAfter` — ignore trust checks for older packages that predate
+  signature/provenance data.
+
+### 6. Security Audits
+- Run `pnpm audit --audit-level=moderate` regularly and in CI to catch known
+  vulnerabilities in the dependency tree.
+
+### 7. HTTPS Registry Only
+- `registry=https://registry.npmjs.org/` in `.npmrc` prevents
+  man-in-the-middle tampering during install.
+
+### 8. Strict Peer Dependencies
+- `strictPeerDependencies: true` in `pnpm-workspace.yaml`.
+- Note: this is a **correctness/compatibility** control, not a supply-chain
+  mitigation — it surfaces incompatible/missing peers instead of silently
+  installing a mismatched tree.
 
 ---
 
 ## Setup Instructions
 
-See the [README](./README_.md) for detailed setup instructions, including installing Node.js, nvm, pnpm, and Docker (optional).
+See the [README](./README.md) for what this project does and how to run it.
+
+Install pnpm (via Corepack, bundled with Node) and the Node version pinned in
+`.nvmrc`:
+
+```bash
+nvm install && nvm use          # match the pinned Node version
+corepack enable                 # provides pnpm (version pinned in package.json "packageManager")
+pnpm install --frozen-lockfile  # reproducible install from the lockfile
+```
 
 ### Daily Development
 
 ```bash
-pnpm install --frozen-lockfile  # Install dependencies with lockfile
-pnpm dev       # Development server
-pnpm build     # Production build
-pnpm preview   # Preview build
-```
-
-### Version Management
-
-All pinned versions (Node.js, pnpm, Nginx) are defined at the top of [Makefile](Makefile). After changing them, run `make sync` to propagate to `.nvmrc` and `package.json`:
-
-```bash
-make sync
+pnpm install --frozen-lockfile  # install from lockfile (CI / fresh checkout)
+pnpm dev                        # node --env-file=.env --watch src/server.js
+pnpm start                      # production start
+pnpm test                       # GLiNER leak-check (needs model weights)
 ```
 
 ---
 
-### Package Management and Audits
+## Package Management and Audits
 
 ```bash
-pnpm add <package>
-pnpm add --save-exact <package>
-pnpm update
-pnpm outdated
-pnpm audit --audit-level=moderate
+pnpm add --save-exact <package>     # add a pinned dependency
+pnpm update                         # update within ranges
+pnpm outdated                       # show available updates
+pnpm audit --audit-level=moderate   # check for known vulnerabilities
 ```
+
+---
 
 ## Configuration
 
-### `.npmrc` - Registry / auth settings (INI)
-- `registry=https://registry.npmjs.org/` - HTTPS only
+### `.npmrc` — registry / auth only (INI)
+- `registry=https://registry.npmjs.org/` — HTTPS only.
+- Put **only** registry URLs and auth tokens here.
 
-### pnpm v11+ — configuration locations
-- pnpm v11+ reads registry/auth settings from INI files (`.npmrc`).
-- All other pnpm settings live in YAML files:
-	- Project-level: `pnpm-workspace.yaml` (recommended in repositories)
-	- Global: pnpm global config (`~/.config/pnpm/config.yaml`)
+### `pnpm-workspace.yaml` — pnpm behavioral settings (YAML)
+pnpm v11+ reads behavioral settings from YAML, not `.npmrc`. Settings used here:
 
-Examples of settings that belong in `pnpm-workspace.yaml` (not `.npmrc`):
-- `lockfile: true`
-- `audit: true`
-- `strictPeerDependencies: true`
-- `minimumReleaseAge: 10080`
-- `saveExact: true`
+```yaml
+minimumReleaseAge: 10080
+blockExoticSubdeps: true
+trustPolicy: no-downgrade
+strictPeerDependencies: true
+saveExact: true
+allowBuilds:
+  # list only dependencies you trust to run build scripts, e.g.:
+  # - some-native-addon
+```
 
-Put registry/auth values (tokens, registry URLs) in `.npmrc`, but put pnpm behavioral settings in `pnpm-workspace.yaml` so pnpm will actually honor them.
+### `.nvmrc` — Node version
+- `nvm install && nvm use` for a consistent Node runtime.
 
-### `.nvmrc` - Node version file
-- Use nvm to manage the Node runtime
-- Run `nvm install` and `nvm use` for consistent Node versions
-
-### `pnpm-lock.yaml` - Dependency lock file
-- **Always commit to version control**
-- Ensures reproducible builds
-- Prevents supply chain attacks
+### `pnpm-lock.yaml` — lock file
+- **Always commit.** Ensures reproducible builds and prevents supply-chain drift.
 
 ---
 
@@ -91,19 +122,22 @@ Put registry/auth values (tokens, registry URLs) in `.npmrc`, but put pnpm behav
 
 | Risk | Mitigation |
 |------|-----------|
-| Typosquatting | Lockfile + explicit dependencies |
-| Compromised packages | `pnpm audit` catches known vulnerabilities |
-| Registry tampering | HTTPS-only registry |
+| Typosquatting | Lockfile + explicit, pinned dependencies |
+| Malicious install scripts | Build scripts blocked by default; `allowBuilds` whitelist |
+| Freshly compromised releases | `minimumReleaseAge` quarantine window |
+| Non-registry / tampered sub-deps | `blockExoticSubdeps: true` |
+| Trust/provenance downgrade | `trustPolicy: no-downgrade` |
+| Known vulnerabilities | `pnpm audit` in CI |
+| Registry tampering (MITM) | HTTPS-only registry |
 | Accidental downgrades | Frozen lockfile |
-| Version conflicts | Strict peer dependencies |
 
 ---
 
 ## Best Practices
 
-1. **Always commit pnpm-lock.yaml** - Never add to .gitignore
-2. **Run `pnpm audit` regularly** - Add to CI/CD
-3. **Review lockfile changes** - Don't blindly merge updates
-4. **Use frozen lockfile in production** - `pnpm install --frozen-lockfile`
-5. **Keep pnpm updated** - `pnpm add -g pnpm@latest`
-
+1. **Always commit `pnpm-lock.yaml`** — never add to `.gitignore`.
+2. **Run `pnpm audit` in CI** — fail builds on moderate+ findings.
+3. **Review lockfile changes** — don't blindly merge dependency updates.
+4. **Use `--frozen-lockfile` in CI/production.**
+5. **Add to `allowBuilds` deliberately** — never `dangerouslyAllowAllBuilds`.
+6. **Keep pnpm updated** via the `packageManager` field + Corepack.
