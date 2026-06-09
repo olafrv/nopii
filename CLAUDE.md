@@ -7,9 +7,8 @@ When you change the code, update the docs in the same task — don't leave them 
 - **`README.md`** — user-facing: setup, `ANTHROPIC_BASE_URL` usage, config table, deploy.
 - **`CLAUDE.md`** (this file) — architecture, invariants, commands, gotchas.
 - **`.env.example`** — add/rename/remove env vars here whenever you touch config.
-- **`PNPM_SECURITY.md`** — package-management & supply-chain-security policy (see below).
-  **Read-only for Claude** — hard-blocked by a deny rule in `.claude/settings.json`.
-  Never edit it; propose changes for a human to apply.
+- **`PNPM_SECURITY.md`** — package-management & supply-chain-security policy. Read-only
+  for Claude (see Package management below).
 - **`src/FILES.md`** — file layout, what each module does, and the cwd/model-path
   gotcha. Update when you add, move, or repurpose a file.
 

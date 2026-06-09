@@ -7,13 +7,33 @@
 > **propose** the diff in your response and let a human apply it (and lift the deny
 > rule deliberately). Never weaken a control to make an install pass.
 
+## For humans: add this to CLAUDE.md
+
+So Claude reads and obeys this policy, a human should keep the following block in
+`CLAUDE.md` (it's the source of truth for the wording — copy it verbatim):
+
+```markdown
+## Package management — MANDATORY
+
+**`PNPM_SECURITY.md` is binding policy, not a suggestion. STOP and read it before you
+add, remove, or update any dependency, touch `pnpm-lock.yaml`, or edit
+`pnpm-workspace.yaml` — then comply with every rule in it.** The non-negotiable core:
+**pnpm only** (never `npm`/`yarn`), **no `package-lock.json`**, and **never**
+`dangerouslyAllowAllBuilds`. Any change that violates `PNPM_SECURITY.md` is wrong and
+must not be committed.
+
+`PNPM_SECURITY.md` is **human-owned and read-only for Claude** — hard-blocked by an
+`Edit`/`Write` deny rule in `.claude/settings.json`. Never edit it. If a change needs
+the policy amended, **propose** the diff in your response and let a human apply it.
+```
+
+## Best Practices
+
 This project follows the recommendations in
 [pnpm's Supply Chain Security guide](https://pnpm.io/supply-chain-security).
 The controls below are enforced via `pnpm-workspace.yaml` (pnpm behavioral
 settings), `.npmrc` (registry/auth only), `package.json` (the `packageManager`
 pin + exact dependency versions), and `.nvmrc` (pinned Node version).
-
-## Best Practices
 
 1. **Always commit `pnpm-lock.yaml`** — never add to `.gitignore`.
 2. **Run `pnpm audit` in CI** — fail builds on moderate+ findings.
