@@ -158,11 +158,12 @@ allowBuilds:               # MAP of package -> allow(true)/disallow(false)
 | Risk | Mitigation |
 |------|-----------|
 | Typosquatting | Lockfile + exact-pinned dependencies (no `^`/`~`) |
+| Dependency confusion | Lockfile + HTTPS registry resolution |
 | Unreviewed version drift | Exact pins + `saveExact: true` |
 | Malicious install scripts | Build scripts blocked by default; `allowBuilds` whitelist |
 | Freshly compromised releases | `minimumReleaseAge` quarantine window |
 | Non-registry / tampered sub-deps | `blockExoticSubdeps: true` |
 | Trust/provenance downgrade | `trustPolicy: no-downgrade` |
-| Known vulnerabilities | `pnpm audit` in CI |
 | Registry tampering (MITM) | HTTPS-only registry |
-| Accidental downgrades | Frozen lockfile |
+| Known vulnerabilities | `pnpm audit` (CI — measure 9) |
+| Accidental downgrades | Frozen lockfile (CI — measure 9) |
