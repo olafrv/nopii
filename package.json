@@ -2,15 +2,13 @@
   "name": "nopii-proxy",
   "type": "module",
   "version": "1.0.0",
-  "description": "Local/remote PII-redaction reverse proxy for the Anthropic Messages API (Claude Code via ANTHROPIC_BASE_URL)",
+  "description": "PII-redaction reverse proxy for the Claude Anthropic API",
   "main": "src/server.js",
   "packageManager": "pnpm@11.5.2",
   "scripts": {
     "dev": "node --env-file=.env --watch src/server.js",
     "start": "node --env-file=.env src/server.js",
-    "check:node-pin": "sh ./pnpm-node-pin-check.sh",
-    "preinstall": "pnpm run check:node-pin",
-    "pretest": "pnpm run check:node-pin",
+    "sync:node-pin": "sh ./pnpm-node-pin-sync.sh",
     "test": "node --test test/leak-check.js"
   },
   "engines": {

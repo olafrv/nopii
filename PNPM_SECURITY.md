@@ -59,8 +59,9 @@ fired during setup). Measure 9 only takes effect once a CI/CD pipeline exists.
 - Bump versions deliberately (`pnpm update <pkg>` then review the lockfile diff),
   never via a floating range. (A hand-edited range is only caught by the CI guard
   below.)
-- The **Node runtime** is likewise exact-pinned — identically in `.nvmrc` and
-  `package.json` `engines.node`, which must stay in sync (see Configuration → Node version).
+- The **Node runtime** is likewise exact-pinned in `.nvmrc` (the single source of
+  truth); `package.json` `engines.node` is generated from it via `pnpm run sync:node-pin`
+  (see Configuration → Node version).
 
 ### 2. Locked Dependencies (`pnpm-lock.yaml`)
 - Ensures reproducible installs across all environments.
@@ -113,8 +114,6 @@ once a CI/CD pipeline runs them:
   you must pass `--frozen-lockfile` to fail on lockfile/manifest drift.
 - **Exact-pin guard** — reject a hand-added `^`/`~` range in `package.json`
   (`saveExact` only governs `pnpm add`, not manual edits).
-- **Node-pin sync** — `pnpm run check:node-pin` fails the build if `.nvmrc` and
-  `package.json` `engines.node` hold different versions.
 
 ---
 
@@ -178,20 +177,19 @@ allowBuilds:               # MAP of package -> allow(true)/disallow(false)
 > list. The legacy `onlyBuiltDependencies`/`neverBuiltDependencies` arrays were
 > removed in pnpm v11.
 
-### Node version — pinned in two places, kept in sync
+### Node version — single source of truth
 The Node runtime is pinned to an **exact** version (e.g. `24.16.0`) — never major-only
-(`24`) or a range — in **two files that must always hold the identical version**:
+(`24`) or a range. It lives in two files, but **`.nvmrc` is the single source of truth**:
 
-- **`.nvmrc`** — switches a developer's local runtime: `nvm install && nvm use`.
-- **`package.json` `engines.node`** — the machine-checkable declaration package
-  managers validate against.
+- **`.nvmrc`** — the version you edit; switches a developer's local runtime
+  (`nvm install && nvm use`).
+- **`package.json` `engines.node`** — the machine-checkable declaration package managers
+  validate against. It is **generated from `.nvmrc`**, never edited by hand.
 
-**Rule:** treat them as one value. When you bump Node, change **both** `.nvmrc` and
-`engines.node` to the same exact version in the same commit, run `pnpm test`, then
-commit. The `check:node-pin` script enforces this — it runs automatically on **every
-`pnpm install`** (`preinstall`) and **`pnpm test`** (`pretest`), and in CI, and fails if
-the two disagree. It compares the declared values only, so it's independent of which
-Node you're currently running.
+**Rule — to bump Node:** edit `.nvmrc` to the new exact version, run
+`pnpm run sync:node-pin` (rewrites `engines.node` from `.nvmrc` via
+`pnpm-node-pin-sync.sh`), then commit both files together. Because `engines.node` is
+generated, the two cannot drift as long as you sync after every `.nvmrc` change.
 
 ### `pnpm-lock.yaml` — lock file
 - **Always commit.** Ensures reproducible builds and prevents supply-chain drift.
