@@ -188,7 +188,10 @@ The Node runtime is pinned to an **exact** version (e.g. `24.16.0`) — never ma
 
 **Rule:** treat them as one value. When you bump Node, change **both** `.nvmrc` and
 `engines.node` to the same exact version in the same commit, run `pnpm test`, then
-commit. The `check:node-pin` script (see CI guards) fails the build if they disagree.
+commit. The `check:node-pin` script enforces this — it runs automatically on **every
+`pnpm install`** (`preinstall`) and **`pnpm test`** (`pretest`), and in CI, and fails if
+the two disagree. It compares the declared values only, so it's independent of which
+Node you're currently running.
 
 ### `pnpm-lock.yaml` — lock file
 - **Always commit.** Ensures reproducible builds and prevents supply-chain drift.

@@ -9,6 +9,7 @@
     "dev": "node --env-file=.env --watch src/server.js",
     "start": "node --env-file=.env src/server.js",
     "check:node-pin": "test \"$(cat .nvmrc)\" = \"$(node -p \"require('./package.json').engines.node\")\" || (echo 'ERROR: .nvmrc and package.json engines.node disagree' && exit 1)",
+    "preinstall": "pnpm run check:node-pin",
     "pretest": "pnpm run check:node-pin",
     "test": "node --test test/leak-check.js"
   },
