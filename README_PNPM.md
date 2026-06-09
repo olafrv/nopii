@@ -3,7 +3,8 @@
 This project follows the recommendations in
 [pnpm's Supply Chain Security guide](https://pnpm.io/supply-chain-security).
 The controls below are enforced via `pnpm-workspace.yaml` (pnpm behavioral
-settings) and `.npmrc` (registry/auth only).
+settings), `.npmrc` (registry/auth only), `package.json` (the `packageManager`
+pin + exact dependency versions), and `.nvmrc` (pinned Node version).
 
 ## Best Practices
 
