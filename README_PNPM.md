@@ -92,7 +92,7 @@ Install pnpm (via Corepack, bundled with Node) and the Node version pinned in
 
 ```bash
 nvm install && nvm use          # match the pinned Node version
-corepack enable                 # provides pnpm (version pinned in package.json "packageManager")
+corepack enable                 # provides the pinned pnpm
 pnpm install --frozen-lockfile  # reproducible install from the lockfile
 ```
 
