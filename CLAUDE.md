@@ -50,8 +50,8 @@ hook-based redaction design.
 ## Commands
 
 ```bash
-corepack enable                      # provides pnpm (version pinned in package.json)
-pnpm install --frozen-lockfile       # deps (Node >= 24 required)
+corepack enable                      # provides pnpm (pinned in package.json)
+pnpm install --frozen-lockfile       # install deps (Node version in .nvmrc)
 pnpm dev                             # start with --watch + .env
 pnpm start                           # start (prod)
 pnpm test                            # GLiNER leak-check — REQUIRES model weights

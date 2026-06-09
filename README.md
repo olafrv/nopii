@@ -74,7 +74,7 @@ extension don't route through an arbitrary proxy, so only the CLI flows through
 ```bash
 corepack enable               # provides pnpm (version pinned in package.json)
 pnpm install --frozen-lockfile
-cp .env.example .env          # adjust if needed
+cp .env.example .env          # every option is documented inline — adjust if needed
 
 # Download the GLiNER ONNX weights into model/  (see model/README.md)
 #   -> model/gliner_medium-v2.1/onnx/model_fp16.onnx
@@ -157,22 +157,6 @@ restrict network access — the proxy sees raw prompts in memory (that's the poi
 so treat the host as sensitive. Each user still supplies their own Anthropic API
 key; `nopii` forwards auth headers untouched and never stores them.
 
-## Configuration
-
-See `.env.example`. Key options:
-
-| Variable | Default | Meaning |
-|---|---|---|
-| `PORT` | `8788` | Listen port |
-| `ANTHROPIC_UPSTREAM_URL` | `https://api.anthropic.com` | Real API endpoint |
-| `FAIL_OPEN` | `false` | On a detection error, **block** the request (default, fail-closed) or forward the original prompt (`true`, leaks PII) |
-| `REDACT_TOOL_RESULTS` | `true` | Also redact `tool_result` content in user turns |
-| `GLINER_MODEL_PATH` | `model/gliner_medium-v2.1/onnx/model_fp16.onnx` | Path to the ONNX weights (`<repo>/onnx/<variant>` layout, resolved from cwd); point elsewhere to swap variants |
-| `GLINER_TOKENIZER` | `onnx-community/gliner_medium-v2.1` | HF repo id for tokenizer files (auto-fetched on first run) |
-| `GLINER_CACHE_DIR` | `model/.cache` | Where the fetched tokenizer is cached (under `model/` so it survives a `node_modules` reinstall) |
-| `GLINER_THRESHOLD` | `0.1` | Detection threshold (lower = more aggressive) |
-| `GLINER_ENTITIES` | see file | Comma-separated entity labels |
-
 ## Limitations & trade-offs
 
 - **Detection is not perfect.** GLiNER + regex catch common PII; domain-specific
@@ -187,7 +171,3 @@ See `.env.example`. Key options:
 - **Mapping is in-process and request-scoped.** No PII is persisted. In a
   multi-replica deployment each request is self-contained (deterministic tokens),
   so no shared store is required.
-
-## Files
-
-See [src/FILES.md](src/FILES.md) for the file layout and what each module does.
