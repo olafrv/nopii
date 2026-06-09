@@ -4,16 +4,15 @@
 
 When you change the code, update the docs in the same task — don't leave them stale:
 
-- **`README.md`** — user-facing: setup, `ANTHROPIC_BASE_URL` usage, config table, deploy.
-- **`CLAUDE.md`** (this file) — architecture, invariants, commands, gotchas.
-- **`.env.example`** — add/rename/remove env vars here whenever you touch config.
-- **`src/FILES.md`** — file layout, what each module does, and the cwd/model-path
-  gotcha. Update when you add, move, or repurpose a file.
+- **`README.md`** — user-facing setup, `ANTHROPIC_BASE_URL` usage, config table, deploy.
+  A changed invariant → also update its limitations.
+- **`CLAUDE.md`** (this file) — architecture, commands, gotchas, and the Invariants
+  section (token shape, redaction scope, fail mode, auth).
+- **`.env.example`** — a new/renamed/removed env var → update here **and** the config tables.
+- **`src/FILES.md`** — the single layout source: file layout, module roles, cwd/model-path
+  gotcha. A new/moved/repurposed file → update here.
 
-Specifically: a new env var → update `.env.example` + the config tables; a new/moved
-file → update `src/FILES.md` (the single layout source); a changed invariant (token
-shape, redaction scope, fail mode, auth) → update the Invariants section and the
-README's limitations. Treat a PR that changes behavior without updating docs as incomplete.
+Treat a PR that changes behavior without updating docs as incomplete.
 
 ## Package management — MANDATORY
 
