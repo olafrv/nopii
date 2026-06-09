@@ -7,11 +7,11 @@ When you change the code, update the docs in the same task — don't leave them 
 - **`README.md`** — user-facing: setup, `ANTHROPIC_BASE_URL` usage, config table, deploy.
 - **`CLAUDE.md`** (this file) — architecture, invariants, commands, gotchas.
 - **`.env.example`** — add/rename/remove env vars here whenever you touch config.
-- **`README_PNPM.md`** — package-management & supply-chain-security policy (see below).
+- **`PNPM_SECURITY.md`** — package-management & supply-chain-security policy (see below).
 
 ## Package management — MANDATORY
 
-**This project uses pnpm, and [`README_PNPM.md`](./README_PNPM.md) is mandatory.**
+**This project uses pnpm, and [`PNPM_SECURITY.md`](./PNPM_SECURITY.md) is mandatory.**
 Every dependency or package-management change MUST comply with it:
 
 - Use **pnpm only** — never `npm`/`yarn`. There is **no `package-lock.json`**;
@@ -22,7 +22,7 @@ Every dependency or package-management change MUST comply with it:
 - Build scripts are blocked by default. Whitelist trusted packages in
   `allowBuilds`; **never** use `dangerouslyAllowAllBuilds`.
 - Add deps with `pnpm add --save-exact`; install with `pnpm install --frozen-lockfile`.
-- When you change any of the above, update `README_PNPM.md` in the same task.
+- When you change any of the above, update `PNPM_SECURITY.md` in the same task.
 
 Specifically: a new env var → update `.env.example` + the config tables; a new/moved
 file → update both layout tables; a changed invariant (token shape, redaction scope,
@@ -101,7 +101,7 @@ the file — so always run from the project root (`npm` scripts already do).
   `model/gliner_medium-v2.1/onnx/model_fp16.onnx` (`<repo>/onnx/<variant>` layout;
   see `model/README.md`) or `src/ner.js`/`npm test` fail. The model is warmed at startup;
   warmup failure is non-fatal (logged), but redaction will then error → fail-closed block.
-- `gliner` is pinned to exact `0.0.19` (no 0.1.x exists; all deps are exact-pinned per README_PNPM.md). API: `new Gliner({tokenizerPath,
+- `gliner` is pinned to exact `0.0.19` (no 0.1.x exists; all deps are exact-pinned per PNPM_SECURITY.md). API: `new Gliner({tokenizerPath,
   onnxSettings:{modelPath}})`, `await initialize()`, `inference({texts, entities, ...})`.
 - The `objc[...] Class CoreMLExecution is implemented in both...` startup line is a
   harmless onnxruntime dylib-duplication warning. Ignore.

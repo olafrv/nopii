@@ -57,7 +57,7 @@ pnpm dev                      # or: pnpm start
 ```
 
 > This project uses **pnpm** with supply-chain-security controls — see
-> [README_PNPM.md](./README_PNPM.md). Use pnpm, not npm.
+> [PNPM_SECURITY.md](./PNPM_SECURITY.md). Use pnpm, not npm.
 
 ## Point Claude Code at it
 
