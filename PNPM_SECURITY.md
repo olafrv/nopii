@@ -1,5 +1,12 @@
 # Package Manager Security Rules (pnpm)
 
+> **🔒 HUMAN-OWNED SECURITY POLICY — DO NOT EDIT WITHOUT HUMAN APPROVAL.**
+> This is governance, not regular documentation. Claude Code must **not** modify
+> this file. It is hard-blocked by an `Edit`/`Write` deny rule in
+> `.claude/settings.json`. If a code or dependency change requires a policy change,
+> **propose** the diff in your response and let a human apply it (and lift the deny
+> rule deliberately). Never weaken a control to make an install pass.
+
 This project follows the recommendations in
 [pnpm's Supply Chain Security guide](https://pnpm.io/supply-chain-security).
 The controls below are enforced via `pnpm-workspace.yaml` (pnpm behavioral

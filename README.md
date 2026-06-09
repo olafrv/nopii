@@ -39,10 +39,37 @@ Gemini PII proxy, retargeted at the Anthropic Messages API.
   values again; tokens inside tool-call JSON inputs are restored with proper JSON
   escaping so tool calls don't break.
 
-## Setup
+## Requirements
 
-Requirements: **Node.js ≥ 24** and an Anthropic **API key** (the proxy works with
-`x-api-key` / `ANTHROPIC_API_KEY` auth).
+- **Node.js ≥ 24**
+- An Anthropic **API key** — the proxy works with `x-api-key` / `ANTHROPIC_API_KEY` auth.
+
+### You need an API key, not your Claude subscription
+
+If you use Claude Desktop, the Claude VS Code extension, or `claude` by **logging
+in through the browser**, you're authenticating with your **Claude Pro/Max
+subscription** (OAuth) — not an API key. These are two separate products:
+
+| | "Log in with Claude" (OAuth) | API key |
+|---|---|---|
+| What it is | Your Claude Pro/Max **subscription** | Pay-as-you-go **developer API** |
+| Where to get it | claude.ai | **[console.anthropic.com](https://console.anthropic.com)** (separate signup) |
+| Billing | Flat monthly subscription | Per-token; **not** covered by your subscription |
+
+`nopii` redacts at the API layer and is validated for **API-key auth**, so you
+need a key. To get one:
+
+1. Sign in at **[console.anthropic.com](https://console.anthropic.com)**.
+2. **Settings → Billing** → add a payment method or buy prepaid credits (the API
+   is billed separately from any Pro/Max subscription).
+3. **Settings → API Keys → Create Key** and copy the `sk-ant-...` value.
+
+Then use it as `ANTHROPIC_API_KEY` below. Note that `ANTHROPIC_BASE_URL`
+redirection is a **`claude` CLI** feature — Claude Desktop and the VS Code
+extension don't route through an arbitrary proxy, so only the CLI flows through
+`nopii` today.
+
+## Setup
 
 ```bash
 corepack enable               # provides pnpm (version pinned in package.json)
@@ -163,11 +190,4 @@ See `.env.example`. Key options:
 
 ## Files
 
-| File | Role |
-|---|---|
-| `src/server.js` | Reverse proxy: redact request, forward, rehydrate response |
-| `src/ner.js` | GLiNER + regex detection layer |
-| `src/privacy.js` | Token generation, scrubbing, rehydration |
-| `src/redact-messages.js` | Walks the Anthropic request body, redacts user turns |
-| `src/sse-rehydrate.js` | Incremental rehydration of the streaming SSE response |
-| `test/` | Leak-check + rehydration tests |
+See [src/FILES.md](src/FILES.md) for the file layout and what each module does.

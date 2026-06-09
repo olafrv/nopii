@@ -8,26 +8,28 @@ When you change the code, update the docs in the same task — don't leave them 
 - **`CLAUDE.md`** (this file) — architecture, invariants, commands, gotchas.
 - **`.env.example`** — add/rename/remove env vars here whenever you touch config.
 - **`PNPM_SECURITY.md`** — package-management & supply-chain-security policy (see below).
+  **Read-only for Claude** — hard-blocked by a deny rule in `.claude/settings.json`.
+  Never edit it; propose changes for a human to apply.
+- **`src/FILES.md`** — file layout, what each module does, and the cwd/model-path
+  gotcha. Update when you add, move, or repurpose a file.
+
+Specifically: a new env var → update `.env.example` + the config tables; a new/moved
+file → update `src/FILES.md` (the single layout source); a changed invariant (token
+shape, redaction scope, fail mode, auth) → update the Invariants section and the
+README's limitations. Treat a PR that changes behavior without updating docs as incomplete.
 
 ## Package management — MANDATORY
 
-**This project uses pnpm, and [`PNPM_SECURITY.md`](./PNPM_SECURITY.md) is mandatory.**
-Every dependency or package-management change MUST comply with it:
+**`PNPM_SECURITY.md` is binding policy, not a suggestion. STOP and read it before you
+add, remove, or update any dependency, touch `pnpm-lock.yaml`, or edit
+`pnpm-workspace.yaml` — then comply with every rule in it.** The non-negotiable core:
+**pnpm only** (never `npm`/`yarn`), **no `package-lock.json`**, and **never**
+`dangerouslyAllowAllBuilds`. Any change that violates `PNPM_SECURITY.md` is wrong and
+must not be committed.
 
-- Use **pnpm only** — never `npm`/`yarn`. There is **no `package-lock.json`**;
-  the lockfile is `pnpm-lock.yaml` and it is always committed.
-- Supply-chain controls in `pnpm-workspace.yaml` are required and must stay set:
-  `minimumReleaseAge`, `blockExoticSubdeps: true`, `trustPolicy: no-downgrade`,
-  `strictPeerDependencies: true`, `saveExact: true`.
-- Build scripts are blocked by default. Whitelist trusted packages in
-  `allowBuilds`; **never** use `dangerouslyAllowAllBuilds`.
-- Add deps with `pnpm add --save-exact`; install with `pnpm install --frozen-lockfile`.
-- When you change any of the above, update `PNPM_SECURITY.md` in the same task.
-
-Specifically: a new env var → update `.env.example` + the config tables; a new/moved
-file → update both layout tables; a changed invariant (token shape, redaction scope,
-fail mode, auth) → update the Invariants section and the README's limitations. Treat a
-PR that changes behavior without updating docs as incomplete.
+`PNPM_SECURITY.md` is **human-owned and read-only for Claude** — hard-blocked by an
+`Edit`/`Write` deny rule in `.claude/settings.json`. Never edit it. If a change needs
+the policy amended, **propose** the diff in your response and let a human apply it.
 
 ## What this is
 
@@ -61,22 +63,6 @@ node --test test/rehydrate.test.js   # rehydration logic — no model needed
 
 Run end-to-end: `ANTHROPIC_BASE_URL=http://localhost:8788 ANTHROPIC_API_KEY=sk-ant-... claude`
 
-## Layout
-
-All runtime code lives in `src/`. Modules import each other relatively (`./privacy.js`).
-
-| File | Role |
-|---|---|
-| `src/server.js` | Reverse proxy: redact request → forward → rehydrate response. Entry point. |
-| `src/ner.js` | GLiNER (ONNX) + regex detection. Returns non-overlapping `{type,start,end}` spans. |
-| `src/privacy.js` | Deterministic token gen, `scrubText`, `rehydrate`/`rehydrateDeep`. |
-| `src/redact-messages.js` | Walks the Anthropic body; redacts **user-role messages only**. |
-| `src/sse-rehydrate.js` | Incremental rehydration of the streaming SSE response. |
-| `test/` | `leak-check.js` (needs model), `rehydrate.test.js` (no model). Imports from `../src/`. |
-
-Note: `src/ner.js` resolves the model path relative to the **cwd** (project root), not
-the file — so always run from the project root (`npm` scripts already do).
-
 ## Invariants — keep these true when editing
 
 - **Only the user prompt is redacted.** `role: "user"` text/`text` blocks/`tool_result`
@@ -99,7 +85,7 @@ the file — so always run from the project root (`npm` scripts already do).
 
 - **Model weights are not in the repo.** Download to
   `model/gliner_medium-v2.1/onnx/model_fp16.onnx` (`<repo>/onnx/<variant>` layout;
-  see `model/README.md`) or `src/ner.js`/`npm test` fail. The model is warmed at startup;
+  see `model/README.md`) or `src/ner.js`/`pnpm test` fail. The model is warmed at startup;
   warmup failure is non-fatal (logged), but redaction will then error → fail-closed block.
 - `gliner` is pinned to exact `0.0.19` (no 0.1.x exists; all deps are exact-pinned per PNPM_SECURITY.md). API: `new Gliner({tokenizerPath,
   onnxSettings:{modelPath}})`, `await initialize()`, `inference({texts, entities, ...})`.
@@ -112,7 +98,7 @@ the file — so always run from the project root (`npm` scripts already do).
   import `@xenova/transformers` directly (now a **direct** dep) only to set `env.cacheDir`
   → `GLINER_CACHE_DIR` (default `model/.cache`), so the cache lives under `model/`, not
   `node_modules`. First run still needs network for the tokenizer; offline thereafter.
-- `npm audit` flags vulns in `@xenova/transformers`; its network/model-download code is
+- `pnpm audit` flags vulns in `@xenova/transformers`; its network/model-download code is
   not in the redaction request path.
 - Validated for **API-key auth**. OAuth/subscription is forwarded as-is but untested.
 
