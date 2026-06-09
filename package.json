@@ -2,7 +2,7 @@
   "name": "nopii-proxy",
   "type": "module",
   "version": "1.0.0",
-  "description": "PII-redaction reverse proxy for the Claude Anthropic API",
+  "description": "PII-redaction proxy for the Anthropic API in Claude Code (CLI)",
   "main": "src/server.js",
   "packageManager": "pnpm@11.5.2",
   "scripts": {

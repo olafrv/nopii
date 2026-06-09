@@ -30,7 +30,7 @@ not be committed.
 
 ## What this is
 
-`nopii` is a **PII-redaction reverse proxy for the Anthropic Messages API**. Claude
+`nopii` is a **PII-redaction proxy for the Anthropic API in Claude Code (CLI)**. Claude
 Code points at it via `ANTHROPIC_BASE_URL`; it redacts PII from the user prompt
 locally (GLiNER + regex), forwards the sanitized request to `api.anthropic.com`, and
 rehydrates the original values in the response.

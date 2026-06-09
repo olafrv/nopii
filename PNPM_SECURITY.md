@@ -114,6 +114,9 @@ once a CI/CD pipeline runs them:
   you must pass `--frozen-lockfile` to fail on lockfile/manifest drift.
 - **Exact-pin guard** — reject a hand-added `^`/`~` range in `package.json`
   (`saveExact` only governs `pnpm add`, not manual edits).
+- **Node-pin sync** — `pnpm run sync:node-pin && git diff --exit-code package.json`
+  fails the build if `engines.node` is stale relative to `.nvmrc` (i.e. someone edited
+  `.nvmrc` without re-running the sync). Catches a forgotten sync with no install/test hooks.
 
 ---
 

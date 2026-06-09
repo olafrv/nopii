@@ -1,4 +1,4 @@
-# nopii — PII redaction proxy for Claude Code
+# nopii — PII-redaction proxy for the Anthropic API in Claude Code (CLI)
 
 Redact personally identifiable information (PII) from your prompts **before they
 reach the Anthropic API**. `nopii` is a thin reverse proxy that sits between Claude
