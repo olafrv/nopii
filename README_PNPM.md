@@ -1,4 +1,4 @@
-# pnpm Security Rules
+# Package Manager Security Rules (pnpm)
 
 This project follows the recommendations in
 [pnpm's Supply Chain Security guide](https://pnpm.io/supply-chain-security).
