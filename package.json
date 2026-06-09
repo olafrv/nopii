@@ -8,10 +8,12 @@
   "scripts": {
     "dev": "node --env-file=.env --watch src/server.js",
     "start": "node --env-file=.env src/server.js",
+    "check:node-pin": "test \"$(cat .nvmrc)\" = \"$(node -p \"require('./package.json').engines.node\")\" || (echo 'ERROR: .nvmrc and package.json engines.node disagree' && exit 1)",
+    "pretest": "pnpm run check:node-pin",
     "test": "node --test test/leak-check.js"
   },
   "engines": {
-    "node": ">=24"
+    "node": "24.16.0"
   },
   "license": "MIT",
   "dependencies": {

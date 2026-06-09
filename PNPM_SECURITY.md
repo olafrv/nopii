@@ -59,6 +59,8 @@ fired during setup). Measure 9 only takes effect once a CI/CD pipeline exists.
 - Bump versions deliberately (`pnpm update <pkg>` then review the lockfile diff),
   never via a floating range. (A hand-edited range is only caught by the CI guard
   below.)
+- The **Node runtime** is likewise exact-pinned — identically in `.nvmrc` and
+  `package.json` `engines.node`, which must stay in sync (see Configuration → Node version).
 
 ### 2. Locked Dependencies (`pnpm-lock.yaml`)
 - Ensures reproducible installs across all environments.
@@ -111,6 +113,8 @@ once a CI/CD pipeline runs them:
   you must pass `--frozen-lockfile` to fail on lockfile/manifest drift.
 - **Exact-pin guard** — reject a hand-added `^`/`~` range in `package.json`
   (`saveExact` only governs `pnpm add`, not manual edits).
+- **Node-pin sync** — `pnpm run check:node-pin` fails the build if `.nvmrc` and
+  `package.json` `engines.node` hold different versions.
 
 ---
 
@@ -174,8 +178,17 @@ allowBuilds:               # MAP of package -> allow(true)/disallow(false)
 > list. The legacy `onlyBuiltDependencies`/`neverBuiltDependencies` arrays were
 > removed in pnpm v11.
 
-### `.nvmrc` — Node version
-- `nvm install && nvm use` for a consistent Node runtime.
+### Node version — pinned in two places, kept in sync
+The Node runtime is pinned to an **exact** version (e.g. `24.16.0`) — never major-only
+(`24`) or a range — in **two files that must always hold the identical version**:
+
+- **`.nvmrc`** — switches a developer's local runtime: `nvm install && nvm use`.
+- **`package.json` `engines.node`** — the machine-checkable declaration package
+  managers validate against.
+
+**Rule:** treat them as one value. When you bump Node, change **both** `.nvmrc` and
+`engines.node` to the same exact version in the same commit, run `pnpm test`, then
+commit. The `check:node-pin` script (see CI guards) fails the build if they disagree.
 
 ### `pnpm-lock.yaml` — lock file
 - **Always commit.** Ensures reproducible builds and prevents supply-chain drift.

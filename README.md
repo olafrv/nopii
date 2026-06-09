@@ -41,7 +41,7 @@ Gemini PII proxy, retargeted at the Anthropic Messages API.
 
 ## Requirements
 
-- **Node.js ≥ 24**
+- **Node.js** — exact version pinned in `.nvmrc` (run `nvm use`)
 - An Anthropic **API key** — the proxy works with `x-api-key` / `ANTHROPIC_API_KEY` auth.
 
 ### You need an API key, not your Claude subscription
