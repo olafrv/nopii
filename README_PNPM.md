@@ -24,19 +24,26 @@ These hold at install time because pnpm reads `pnpm-workspace.yaml` / `.npmrc` o
 every resolve (verified: the trust-policy and build-script blocks fired during
 setup). Measures that still rely on a CI gate are listed separately below.
 
-### 1. Locked Dependencies (`pnpm-lock.yaml`)
+### 1. Exact Version Pinning
+- All `dependencies` are pinned exactly (no `^`/`~`), and `saveExact: true` makes
+  **future** `pnpm add` write exact versions.
+- Bump versions deliberately (`pnpm update <pkg>` then review the lockfile diff),
+  never via a floating range. (A hand-edited range is only caught by the CI guard
+  below.)
+
+### 2. Locked Dependencies (`pnpm-lock.yaml`)
 - Ensures reproducible installs across all environments.
 - Prevents accidental version upgrades.
 - Detects dependency-confusion attacks.
 - **Always commit it; never add to `.gitignore`.**
 
-### 2. Minimum Release Age
+### 3. Minimum Release Age
 - `minimumReleaseAge: 10080` in `pnpm-workspace.yaml` blocks packages published
   less than 7 days ago (pnpm v11+; the v11 default is `1440` = 1 day).
 - Protects against newly published, not-yet-detected supply-chain compromises.
 - Set to `0` to disable.
 
-### 3. Blocked Build Scripts (`allowBuilds`)
+### 4. Blocked Build Scripts (`allowBuilds`)
 - pnpm does **not** run dependency lifecycle scripts (`postinstall`, etc.) by
   default — the most common malware execution vector.
 - Whitelist only the dependencies you trust to run build scripts via the
@@ -44,34 +51,27 @@ setup). Measures that still rely on a CI gate are listed separately below.
 - **Never** use `dangerouslyAllowAllBuilds` — it globally re-enables script
   execution for every package.
 
-### 4. Block Exotic Sub-Dependencies (`blockExoticSubdeps`)
+### 5. Block Exotic Sub-Dependencies (`blockExoticSubdeps`)
 - `blockExoticSubdeps: true` prevents transitive dependencies from resolving to
   git repositories or direct tarball URLs, which bypass the registry and its
   integrity checks.
 
-### 5. Trust Policy (`trustPolicy`)
+### 6. Trust Policy (`trustPolicy`)
 - `trustPolicy: no-downgrade` refuses a package whose trust level (signature /
   provenance) has decreased compared to a previous release.
 - `trustPolicyExclude` — allow specific packages/versions to bypass the check.
 - `trustPolicyIgnoreAfter` — ignore trust checks for older packages that predate
   signature/provenance data.
 
-### 6. HTTPS Registry Only
+### 7. HTTPS Registry Only
 - `registry=https://registry.npmjs.org/` in `.npmrc` prevents
   man-in-the-middle tampering during install.
 
-### 7. Strict Peer Dependencies
+### 8. Strict Peer Dependencies
 - `strictPeerDependencies: true` in `pnpm-workspace.yaml`.
 - Note: this is a **correctness/compatibility** control, not a supply-chain
   mitigation — it surfaces incompatible/missing peers instead of silently
   installing a mismatched tree.
-
-### 8. Exact Version Pinning
-- All `dependencies` are pinned exactly (no `^`/`~`), and `saveExact: true` makes
-  **future** `pnpm add` write exact versions.
-- Bump versions deliberately (`pnpm update <pkg>` then review the lockfile diff),
-  never via a floating range. (A hand-edited range is only caught by the CI guard
-  below.)
 
 ---
 
