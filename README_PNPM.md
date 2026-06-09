@@ -16,26 +16,13 @@ settings) and `.npmrc` (registry/auth only).
 7. **Pin every dependency exactly** — no `^`/`~` in `package.json`; bump via
    `pnpm update <pkg>` and review the lockfile diff.
 
-### Not yet enforced (manual / CI gate needed)
-
-A local `pnpm install` does **not** enforce these — they need a CI workflow to
-become hard gates:
-
-- **Security audits** (practice 2) — `pnpm audit --audit-level=moderate` catches
-  known vulnerabilities, but nothing runs it automatically yet; today it is manual.
-- **Frozen lockfile** (practice 4) — `pnpm install` only auto-freezes when
-  `CI=true`; locally you must pass `--frozen-lockfile` to fail on lockfile/manifest
-  drift.
-- **Exact-pin guard** (practice 7) — nothing rejects a hand-added `^`/`~` range
-  without a CI check (`saveExact` only governs `pnpm add`).
-
 ---
 
 ## Enforced Security Measures
 
-These hold at install time because pnpm reads `pnpm-workspace.yaml` / `.npmrc` on
-every resolve (verified: the trust-policy and build-script blocks fired during
-setup). Measures that still rely on a CI gate are noted under Best Practices above.
+Measures 1–8 hold at install time because pnpm reads `pnpm-workspace.yaml` /
+`.npmrc` on every resolve (verified: the trust-policy and build-script blocks
+fired during setup). Measure 9 only takes effect once a CI/CD pipeline exists.
 
 ### 1. Exact Version Pinning
 - All `dependencies` are pinned exactly (no `^`/`~`), and `saveExact: true` makes
@@ -85,6 +72,16 @@ setup). Measures that still rely on a CI gate are noted under Best Practices abo
 - Note: this is a **correctness/compatibility** control, not a supply-chain
   mitigation — it surfaces incompatible/missing peers instead of silently
   installing a mismatched tree.
+
+### 9. CI/CD Checks (if CI/CD exists)
+A local `pnpm install` does **not** enforce these — they only become hard gates
+once a CI/CD pipeline runs them:
+- **Security audits** — `pnpm audit --audit-level=moderate` to fail builds on
+  known vulnerabilities (nothing runs it automatically yet; today it is manual).
+- **Frozen lockfile** — `pnpm install` only auto-freezes when `CI=true`; locally
+  you must pass `--frozen-lockfile` to fail on lockfile/manifest drift.
+- **Exact-pin guard** — reject a hand-added `^`/`~` range in `package.json`
+  (`saveExact` only governs `pnpm add`, not manual edits).
 
 ---
 
