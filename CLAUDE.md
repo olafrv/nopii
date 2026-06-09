@@ -67,11 +67,12 @@ Run end-to-end: `ANTHROPIC_BASE_URL=http://localhost:8788 ANTHROPIC_API_KEY=sk-a
 (OAuth: `pnpm run oauth-login`, then `AUTH_MODE=oauth pnpm start` with a placeholder `ANTHROPIC_API_KEY`.)
 
 Containerised (proxy + claude, isolated from the host claude login):
-`./run-claude.sh` (= `docker compose -f docker/docker-compose.yml run --rm --build claude`;
-auth follows `AUTH_MODE` in `.env` via `docker/claude-entrypoint.sh`). All Docker files
-live in `docker/` (build context is the repo root); `.dockerignore` stays at the root
-because Docker only reads it from the context root. Stop the proxy with
-`docker compose -f docker/docker-compose.yml down`.
+`./claude-nopii.sh start` (= `docker compose -f docker/docker-compose.yml run --rm --build
+claude`) drops you into claude; `./claude-nopii.sh log` (= `… logs proxy`; add `-f` to follow) prints the proxy logs;
+`./claude-nopii.sh stop` (= `… down`) tears it down. `start` is the default subcommand; args
+after it pass through to claude. Auth follows `AUTH_MODE` in `.env` via
+`docker/claude-entrypoint.sh`. All Docker files live in `docker/` (build context is the repo
+root); `.dockerignore` stays at the root because Docker only reads it from the context root.
 
 ## Invariants — keep these true when editing
 

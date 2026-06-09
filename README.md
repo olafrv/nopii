@@ -1,36 +1,25 @@
 # nopii — PII-redaction proxy for the Anthropic API in Claude Code (CLI)
 
+
+```
+Claude Code ──► nopii proxy (redacted) ──► api.anthropic.com
+Claude Code ◄── nopii proxy (rehydrated) ◄── api.anthropic.com
+```
+
 Redact personally identifiable information (PII) from your prompts **before they
 reach the Anthropic API**. `nopii` is a thin reverse proxy that sits between Claude
 Code and `api.anthropic.com`. It detects PII locally (GLiNER + regex), replaces it
 with stable placeholder tokens, forwards the sanitized request to Claude, and
 restores the original values in Claude's response so your experience is unchanged.
 
-```
-Claude Code ──(ANTHROPIC_BASE_URL)──► nopii proxy ──redacted──► api.anthropic.com
-                                          │
-                                  GLiNER + regex (local)
-```
+> **WARNING:** `ANTHROPIC_BASE_URL` redirection is a **`claude` CLI or Agent SDK** feature — Claude Desktop and
+the VS Code extension do not honour that variable, so they can't be routed to `nopii` proxy.
 
-## Why a proxy and not a hook?
-
-The original idea was a Claude Code **hook**. We checked the
-[hooks API](https://code.claude.com/docs/en/hooks) carefully: a `UserPromptSubmit`
-hook **cannot modify the prompt** — the docs state it "Cannot modify the prompt
-text… you can only add context, block, or allow it." So a hook can *detect* PII and
-*block* the turn, but it physically cannot strip PII out and let a clean version
-through. The raw prompt always reaches the API.
-
-To truly **redact before the API**, interception has to happen at the HTTP layer.
-Claude Code natively supports this via the `ANTHROPIC_BASE_URL` environment
-variable, so `nopii` redirects API traffic through a local (or shared) proxy that
-rewrites the request body. This is the same scrub-and-rehydrate pattern as a
-Gemini PII proxy, retargeted at the Anthropic Messages API.
-
-## What gets redacted
+## PII Values Redacted
 
 - **Only the user prompt.** `nopii` rewrites `role: "user"` messages — plain text,
-  `text` blocks, and (optionally) `tool_result` content you feed back. System
+  `text` blocks, and `tool_result` content you feed back (on by default; disable
+  with `REDACT_TOOL_RESULTS=false`). System
   prompts and assistant turns are untouched.
 - Placeholders are **deterministic**: `<PERSON_3f9a2b10>` = `<TYPE>_<sha256(value)[:8]>`.
   The same value always maps to the same token, so multi-turn conversations stay
@@ -39,7 +28,7 @@ Gemini PII proxy, retargeted at the Anthropic Messages API.
   values again; tokens inside tool-call JSON inputs are restored with proper JSON
   escaping so tool calls don't break.
 
-## Auth: API key or your Claude subscription
+## Authentication
 
 `nopii` supports two ways to authenticate, set with `AUTH_MODE`:
 
@@ -50,9 +39,6 @@ Gemini PII proxy, retargeted at the Anthropic Messages API.
 | How auth works | Claude Code's `x-api-key` is forwarded untouched | nopii holds its own OAuth token and injects it |
 | Setup | Create a key (below) | `pnpm run oauth-login` once (below) |
 
-`ANTHROPIC_BASE_URL` redirection is a **`claude` CLI** feature — Claude Desktop and
-the VS Code extension don't route through an arbitrary proxy, so only the CLI flows
-through `nopii` either way.
 
 ### Option A — API key (default)
 
@@ -61,26 +47,20 @@ through `nopii` either way.
    is billed separately from any Pro/Max subscription).
 3. **Settings → API Keys → Create Key** and copy the `sk-ant-...` value.
 
-Then use it as `ANTHROPIC_API_KEY` below.
+```bash
+# in the shell you run the proxy:
+pnpm start
+```
 
 ### Option B — your Claude Pro/Max subscription (OAuth)
 
 Use your existing subscription instead of paying per token:
 
 ```bash
-pnpm run oauth-login   # opens your browser; approve, then tokens are saved to ~/.nopii
-```
-
-Then run the proxy in oauth mode and point Claude Code at it with **any placeholder
-key** (Claude Code needs *some* credential to send requests; nopii replaces it):
-
-```bash
+# in the shell you run the proxy:
+pnpm run oauth-login  # opens browser -> approve -> tokens saved to ~/.nopii
 export AUTH_MODE=oauth
 pnpm start
-# in the shell you run claude from:
-export ANTHROPIC_BASE_URL=http://localhost:8788
-export ANTHROPIC_API_KEY=sk-ant-placeholder
-claude
 ```
 
 nopii reads Claude Code's authentic request (its system prompt, beta headers and
@@ -112,7 +92,7 @@ pnpm dev                      # or: pnpm start
 > This project uses **pnpm** with supply-chain-security controls — see
 > [PNPM_SECURITY.md](./PNPM_SECURITY.md). Use pnpm, not npm.
 
-## Point Claude Code at it
+## Porxy Claude Code
 
 ```bash
 export ANTHROPIC_BASE_URL=http://localhost:8788
@@ -120,7 +100,7 @@ export ANTHROPIC_API_KEY=sk-ant-...
 claude
 ```
 
-Or persist it in `~/.claude/settings.json`:
+Or persist it in `~/.claude/settings.json`, then run `claude`:
 
 ```json
 {
@@ -130,6 +110,8 @@ Or persist it in `~/.claude/settings.json`:
 }
 ```
 
+## Verify redaction end-to-end
+
 Now anything you type containing a name, email, phone number, IP, etc. is replaced
 with a token before it leaves your machine. Verify the proxy is live:
 
@@ -137,43 +119,6 @@ with a token before it leaves your machine. Verify the proxy is live:
 curl -s http://localhost:8788/healthz
 # {"ok":true,"upstream":"https://api.anthropic.com"}
 ```
-
-## Run in a container (isolated from your host login)
-
-If you don't want nopii's setup to disturb the `claude` you already use (e.g. you're
-logged into claude.ai on the host), run both the proxy **and** Claude Code in
-containers. The containerised `claude` is **fully isolated** — nothing is mounted into
-it, so it never touches your host's `~/.claude` login and every run starts clean. That
-sidesteps the "token + API key" auth conflict. (Because nothing is mounted, this claude
-can't see your repo — it's for exercising the proxy/auth path, not editing host files.)
-
-```bash
-# 1. (only for AUTH_MODE=oauth) mint subscription tokens on the host — needs a browser:
-pnpm run oauth-login
-
-# 2. set AUTH_MODE in .env  (oauth → uses your subscription; passthrough → uses ANTHROPIC_API_KEY)
-
-# 3. launch:
-./run-claude.sh                 # builds if needed, starts the proxy, drops you into claude
-                                # extra args pass through: ./run-claude.sh --help
-
-# 4. when done:
-docker compose -f docker/docker-compose.yml down   # stop the proxy
-```
-
-How auth is chosen inside the container (see `docker/claude-entrypoint.sh`):
-
-| `AUTH_MODE` in `.env` | What the container does |
-|---|---|
-| `oauth` | Claude Code starts with a **placeholder** key; the proxy injects your subscription token (read from the mounted `~/.nopii`). No real key needed. |
-| `passthrough` (default) | Claude Code forwards your real **`ANTHROPIC_API_KEY`**, inherited from your **host shell** (`export ANTHROPIC_API_KEY=sk-ant-...` before `./run-claude.sh`) — never stored in `.env` |
-
-Only the **proxy** mounts anything: your OAuth tokens from `~/.nopii` (read-write so
-token refresh persists), plus `./model` and live `./src`. To watch redaction happen,
-set `NODE_ENV=development` and `DEBUG=true` in `.env` (the proxy logs span **counts**
-only, never values) and run `docker compose -f docker/docker-compose.yml logs -f proxy`.
-
-## Verify redaction end-to-end
 
 With `NODE_ENV=development DEBUG=true` set, the proxy logs how many PII spans it
 redacted per request (counts only — never the values). You can also exercise the
@@ -194,6 +139,26 @@ curl -s http://localhost:8788/v1/messages \
 Anthropic receives `Email <PERSON_xxxxxxxx> at <EMAIL_xxxxxxxx> about Tuesday.`
 You get a reply with the real name and email restored.
 
+
+## Run in a container (isolated from your host login)
+
+If you don't want nopii's setup to disturb the `claude` you already use (e.g. you're
+logged into claude.ai on the host), run both the proxy **and** Claude Code in
+containers. The containerised `claude` is **fully isolated** — nothing is mounted into
+it, so it never touches your host's `~/.claude` login and every run starts clean.
+
+```bash
+./claude-nopii.sh start         # build if needed, start the proxy, drop into claude
+                                # `start` is the default; extra args pass through to claude
+./claude-nopii.sh log           # print the proxy logs (add -f to follow)
+./claude-nopii.sh stop          # tear down the proxy and containers when done
+```
+
+Only the **proxy** mounts anything: your OAuth tokens from `~/.nopii` (read-write so
+token refresh persists), plus `./model` and live `./src`. To watch redaction happen,
+set `NODE_ENV=development` and `DEBUG=true` in `.env` (the proxy logs span **counts**
+only, never values) and run `./claude-nopii.sh log`.
+
 ## Tests
 
 ```bash
@@ -209,7 +174,8 @@ inputs.
 ## Deploy as a shared server
 
 ```bash
-docker build -t nopii -f docker/Dockerfile .   # context is the repo root; weights in model/ are copied in
+# context is the repo root; weights in model/ are copied in the image
+docker build -t nopii -f docker/Dockerfile .   
 docker run -p 8788:8788 nopii
 ```
 
@@ -231,7 +197,7 @@ is meant for a single local user.)
 - **Auth.** Two modes via `AUTH_MODE`: `passthrough` (API key, forwarded untouched) and
   `oauth` (your Pro/Max subscription, tokens held and refreshed by nopii — see *Auth*
   above). Both are verified end-to-end for the **`claude` CLI**; Claude Desktop/VS Code
-  don't route through the proxy.
+  can't be routed through the proxy.
 - **Fail-closed by default.** If detection errors, the request is blocked so PII
   cannot leak. Flip `FAIL_OPEN=true` only if availability matters more than privacy.
 - **Mapping is in-process and request-scoped.** No PII is persisted. In a

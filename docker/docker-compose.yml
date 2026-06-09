@@ -3,9 +3,10 @@
 #
 #   1. (host, once, only for AUTH_MODE=oauth)   pnpm run oauth-login
 #        -> mints subscription tokens into ~/.nopii (the browser flow needs a host browser)
-#   2. ./run-claude.sh                           (from repo root; wraps the compose call)
+#   2. ./claude-nopii.sh start                   (from repo root; wraps the compose call)
 #        -> builds if needed, starts the proxy, drops you into Claude Code
-#   3. docker compose -f docker/docker-compose.yml down   -> stop the proxy when finished
+#   3. ./claude-nopii.sh log [-f]                 -> print the proxy logs (-f to follow)
+#   4. ./claude-nopii.sh stop                     -> stop the proxy and tear down when finished
 #
 # Which credential is used follows AUTH_MODE in .env:
 #   oauth       -> your Pro/Max subscription, injected by nopii (placeholder API key)
@@ -41,10 +42,13 @@ services:
     depends_on:
       proxy:
         condition: service_healthy
-    env_file: ../.env                      # supplies AUTH_MODE (proxy config — never the API key)
+    # No env_file here: loading the whole ../.env would leak proxy-only vars (DEBUG,
+    # NODE_ENV, GLINER_*) into Claude Code — DEBUG makes the CLI run verbose. Pass ONLY
+    # what claude needs. AUTH_MODE is exported by claude-nopii.sh from .env.
     environment:
       ANTHROPIC_BASE_URL: http://proxy:8788    # targets the proxy service (overrides any .env value)
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}  # passthrough: inherited from your host shell; oauth: ignored (placeholder used)
+      AUTH_MODE: ${AUTH_MODE:-passthrough}     # selects auth in claude-entrypoint.sh; default passthrough
     # Nothing mounted: fully isolated, ephemeral claude. It never touches your host's
     # ~/.claude login, and every run starts clean. (It also can't see your repo — this
     # is for exercising the proxy/auth path, not editing host files.)
