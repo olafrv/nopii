@@ -18,7 +18,11 @@ settings) and `.npmrc` (registry/auth only).
 
 ---
 
-## Security Measures
+## Enforced Security Measures
+
+These hold at install time because pnpm reads `pnpm-workspace.yaml` / `.npmrc` on
+every resolve (verified: the trust-policy and build-script blocks fired during
+setup). Measures that still rely on a CI gate are listed separately below.
 
 ### 1. Locked Dependencies (`pnpm-lock.yaml`)
 - Ensures reproducible installs across all environments.
@@ -52,28 +56,36 @@ settings) and `.npmrc` (registry/auth only).
 - `trustPolicyIgnoreAfter` — ignore trust checks for older packages that predate
   signature/provenance data.
 
-### 6. Security Audits
-- Run `pnpm audit --audit-level=moderate` regularly and in CI to catch known
-  vulnerabilities in the dependency tree.
-
-### 7. HTTPS Registry Only
+### 6. HTTPS Registry Only
 - `registry=https://registry.npmjs.org/` in `.npmrc` prevents
   man-in-the-middle tampering during install.
 
-### 8. Strict Peer Dependencies
+### 7. Strict Peer Dependencies
 - `strictPeerDependencies: true` in `pnpm-workspace.yaml`.
 - Note: this is a **correctness/compatibility** control, not a supply-chain
   mitigation — it surfaces incompatible/missing peers instead of silently
   installing a mismatched tree.
 
-### 9. Exact Version Pinning
-- `saveExact: true` makes **future** `pnpm add` write exact versions.
-- It does **not** rewrite existing ranges, so **all `dependencies` /
-  `devDependencies` in `package.json` must be pinned exactly** — no `^` or `~`.
-  A range lets `pnpm update` (or a fresh resolve) pull a different version than
-  the one reviewed, widening the typosquat / malicious-release window.
+### 8. Exact Version Pinning
+- All `dependencies` are pinned exactly (no `^`/`~`), and `saveExact: true` makes
+  **future** `pnpm add` write exact versions.
 - Bump versions deliberately (`pnpm update <pkg>` then review the lockfile diff),
-  never via a floating range.
+  never via a floating range. (A hand-edited range is only caught by the CI guard
+  below.)
+
+---
+
+## Not Yet Enforced (manual / CI gate needed)
+
+A local `pnpm install` does **not** enforce these — they need a CI workflow to
+become hard gates:
+
+- **Security audits** — `pnpm audit --audit-level=moderate` catches known
+  vulnerabilities, but nothing runs it automatically yet; today it is manual.
+- **Frozen lockfile** — `pnpm install` only auto-freezes when `CI=true`; locally
+  you must pass `--frozen-lockfile` to fail on lockfile/manifest drift.
+- **Exact-pin guard** — nothing rejects a hand-added `^`/`~` range without a CI
+  check (`saveExact` only governs `pnpm add`).
 
 ---
 
