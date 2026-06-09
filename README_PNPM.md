@@ -5,6 +5,19 @@ This project follows the recommendations in
 The controls below are enforced via `pnpm-workspace.yaml` (pnpm behavioral
 settings) and `.npmrc` (registry/auth only).
 
+## Best Practices
+
+1. **Always commit `pnpm-lock.yaml`** — never add to `.gitignore`.
+2. **Run `pnpm audit` in CI** — fail builds on moderate+ findings.
+3. **Review lockfile changes** — don't blindly merge dependency updates.
+4. **Use `--frozen-lockfile` in CI/production.**
+5. **Add to `allowBuilds` deliberately** — never `dangerouslyAllowAllBuilds`.
+6. **Keep pnpm updated** via the `packageManager` field + Corepack.
+7. **Pin every dependency exactly** — no `^`/`~` in `package.json`; bump via
+   `pnpm update <pkg>` and review the lockfile diff.
+
+---
+
 ## Security Measures
 
 ### 1. Locked Dependencies (`pnpm-lock.yaml`)
@@ -147,16 +160,3 @@ allowBuilds:               # MAP of package -> allow(true)/disallow(false)
 | Known vulnerabilities | `pnpm audit` in CI |
 | Registry tampering (MITM) | HTTPS-only registry |
 | Accidental downgrades | Frozen lockfile |
-
----
-
-## Best Practices
-
-1. **Always commit `pnpm-lock.yaml`** — never add to `.gitignore`.
-2. **Run `pnpm audit` in CI** — fail builds on moderate+ findings.
-3. **Review lockfile changes** — don't blindly merge dependency updates.
-4. **Use `--frozen-lockfile` in CI/production.**
-5. **Add to `allowBuilds` deliberately** — never `dangerouslyAllowAllBuilds`.
-6. **Keep pnpm updated** via the `packageManager` field + Corepack.
-7. **Pin every dependency exactly** — no `^`/`~` in `package.json`; bump via
-   `pnpm update <pkg>` and review the lockfile diff.
