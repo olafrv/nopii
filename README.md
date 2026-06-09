@@ -39,12 +39,7 @@ Gemini PII proxy, retargeted at the Anthropic Messages API.
   values again; tokens inside tool-call JSON inputs are restored with proper JSON
   escaping so tool calls don't break.
 
-## Requirements
-
-- **Node.js** — exact version pinned in `.nvmrc` (run `nvm use`)
-- An Anthropic **API key** — the proxy works with `x-api-key` / `ANTHROPIC_API_KEY` auth.
-
-### You need an API key, not your Claude subscription
+## You need an API key, not your Claude subscription
 
 If you use Claude Desktop, the Claude VS Code extension, or `claude` by **logging
 in through the browser**, you're authenticating with your **Claude Pro/Max
