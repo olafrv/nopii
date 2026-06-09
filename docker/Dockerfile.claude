@@ -1,0 +1,25 @@
+# Claude Code CLI in a container — fully isolated (nothing mounted), talking to the nopii
+# proxy. Installed via Anthropic's official native installer, which downloads the platform
+# binary and verifies its SHA256 against the signed release manifest before installing —
+# so no npm/pnpm and no Node runtime dependency for claude itself.
+FROM node:24-slim
+
+# curl: used by the native installer and by the entrypoint to wait for the proxy.
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends curl ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
+
+# Pin the version: --build-arg CLAUDE_CODE_VERSION=2.1.169 (also accepts stable|latest).
+# The installer checksum-verifies the binary, then sets up the launcher in /root/.local/bin.
+ARG CLAUDE_CODE_VERSION=stable
+RUN curl -fsSL https://claude.ai/install.sh | bash -s -- "${CLAUDE_CODE_VERSION}"
+
+ENV PATH="/root/.local/bin:${PATH}"
+# Fail the build loudly if the launcher didn't land where we expect it.
+RUN claude --version
+
+COPY docker/claude-entrypoint.sh /usr/local/bin/claude-entrypoint.sh
+RUN chmod +x /usr/local/bin/claude-entrypoint.sh
+
+WORKDIR /workspace
+ENTRYPOINT ["claude-entrypoint.sh"]

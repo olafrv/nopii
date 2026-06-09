@@ -39,30 +39,61 @@ Gemini PII proxy, retargeted at the Anthropic Messages API.
   values again; tokens inside tool-call JSON inputs are restored with proper JSON
   escaping so tool calls don't break.
 
-## You need an API key, not your Claude subscription
+## Auth: API key or your Claude subscription
 
-If you use Claude Desktop, the Claude VS Code extension, or `claude` by **logging
-in through the browser**, you're authenticating with your **Claude Pro/Max
-subscription** (OAuth) — not an API key. These are two separate products:
+`nopii` supports two ways to authenticate, set with `AUTH_MODE`:
 
-| | "Log in with Claude" (OAuth) | API key |
+| | `passthrough` (default) | `oauth` |
 |---|---|---|
-| What it is | Your Claude Pro/Max **subscription** | Pay-as-you-go **developer API** |
-| Where to get it | claude.ai | **[console.anthropic.com](https://console.anthropic.com)** (separate signup) |
-| Billing | Flat monthly subscription | Per-token; **not** covered by your subscription |
+| What you use | A pay-as-you-go **API key** | Your Claude Pro/Max **subscription** |
+| Billing | Per-token (separate from any subscription) | Flat monthly subscription |
+| How auth works | Claude Code's `x-api-key` is forwarded untouched | nopii holds its own OAuth token and injects it |
+| Setup | Create a key (below) | `pnpm run oauth-login` once (below) |
 
-`nopii` redacts at the API layer and is validated for **API-key auth**, so you
-need a key. To get one:
+`ANTHROPIC_BASE_URL` redirection is a **`claude` CLI** feature — Claude Desktop and
+the VS Code extension don't route through an arbitrary proxy, so only the CLI flows
+through `nopii` either way.
+
+### Option A — API key (default)
 
 1. Sign in at **[console.anthropic.com](https://console.anthropic.com)**.
 2. **Settings → Billing** → add a payment method or buy prepaid credits (the API
    is billed separately from any Pro/Max subscription).
 3. **Settings → API Keys → Create Key** and copy the `sk-ant-...` value.
 
-Then use it as `ANTHROPIC_API_KEY` below. Note that `ANTHROPIC_BASE_URL`
-redirection is a **`claude` CLI** feature — Claude Desktop and the VS Code
-extension don't route through an arbitrary proxy, so only the CLI flows through
-`nopii` today.
+Then use it as `ANTHROPIC_API_KEY` below.
+
+### Option B — your Claude Pro/Max subscription (OAuth)
+
+Use your existing subscription instead of paying per token:
+
+```bash
+pnpm run oauth-login   # opens your browser; approve, then tokens are saved to ~/.nopii
+```
+
+Then run the proxy in oauth mode and point Claude Code at it with **any placeholder
+key** (Claude Code needs *some* credential to send requests; nopii replaces it):
+
+```bash
+export AUTH_MODE=oauth
+pnpm start
+# in the shell you run claude from:
+export ANTHROPIC_BASE_URL=http://localhost:8788
+export ANTHROPIC_API_KEY=sk-ant-placeholder
+claude
+```
+
+nopii reads Claude Code's authentic request (its system prompt, beta headers and
+fingerprints are real, since the client *is* Claude Code), swaps in your OAuth
+Bearer token, and refreshes it automatically (including a one-shot retry on a 401).
+When the refresh token finally expires, just `pnpm run oauth-login` again.
+
+> **Note:** it's `pnpm run oauth-login`, not `pnpm login` — `login` is a built-in
+> pnpm command (it logs into the npm registry), so it would never run this script.
+
+> **Security note:** in oauth mode your subscription tokens are stored **in
+> plaintext** at `~/.nopii/credentials.json` (mode `0600`). Treat that file like a
+> password. Override the location with `NOPII_CREDENTIALS_DIR`.
 
 ## Setup
 
@@ -107,6 +138,41 @@ curl -s http://localhost:8788/healthz
 # {"ok":true,"upstream":"https://api.anthropic.com"}
 ```
 
+## Run in a container (isolated from your host login)
+
+If you don't want nopii's setup to disturb the `claude` you already use (e.g. you're
+logged into claude.ai on the host), run both the proxy **and** Claude Code in
+containers. The containerised `claude` is **fully isolated** — nothing is mounted into
+it, so it never touches your host's `~/.claude` login and every run starts clean. That
+sidesteps the "token + API key" auth conflict. (Because nothing is mounted, this claude
+can't see your repo — it's for exercising the proxy/auth path, not editing host files.)
+
+```bash
+# 1. (only for AUTH_MODE=oauth) mint subscription tokens on the host — needs a browser:
+pnpm run oauth-login
+
+# 2. set AUTH_MODE in .env  (oauth → uses your subscription; passthrough → uses ANTHROPIC_API_KEY)
+
+# 3. launch:
+./run-claude.sh                 # builds if needed, starts the proxy, drops you into claude
+                                # extra args pass through: ./run-claude.sh --help
+
+# 4. when done:
+docker compose -f docker/docker-compose.yml down   # stop the proxy
+```
+
+How auth is chosen inside the container (see `docker/claude-entrypoint.sh`):
+
+| `AUTH_MODE` in `.env` | What the container does |
+|---|---|
+| `oauth` | Claude Code starts with a **placeholder** key; the proxy injects your subscription token (read from the mounted `~/.nopii`). No real key needed. |
+| `passthrough` (default) | Claude Code forwards your real **`ANTHROPIC_API_KEY`**, inherited from your **host shell** (`export ANTHROPIC_API_KEY=sk-ant-...` before `./run-claude.sh`) — never stored in `.env` |
+
+Only the **proxy** mounts anything: your OAuth tokens from `~/.nopii` (read-write so
+token refresh persists), plus `./model` and live `./src`. To watch redaction happen,
+set `NODE_ENV=development` and `DEBUG=true` in `.env` (the proxy logs span **counts**
+only, never values) and run `docker compose -f docker/docker-compose.yml logs -f proxy`.
+
 ## Verify redaction end-to-end
 
 With `NODE_ENV=development DEBUG=true` set, the proxy logs how many PII spans it
@@ -143,14 +209,17 @@ inputs.
 ## Deploy as a shared server
 
 ```bash
-docker build -t nopii .       # weights in model/ are copied into the image
+docker build -t nopii -f docker/Dockerfile .   # context is the repo root; weights in model/ are copied in
 docker run -p 8788:8788 nopii
 ```
 
 Teammates set `ANTHROPIC_BASE_URL=https://your-host:8788`. Run it behind TLS and
 restrict network access — the proxy sees raw prompts in memory (that's the point),
-so treat the host as sensitive. Each user still supplies their own Anthropic API
-key; `nopii` forwards auth headers untouched and never stores them.
+so treat the host as sensitive. In the default `passthrough` mode each user still
+supplies their own Anthropic API key; `nopii` forwards auth headers untouched and
+never stores them. (Don't deploy `AUTH_MODE=oauth` as a shared server — it would
+bill every request to one subscription and exposes that account's tokens; oauth mode
+is meant for a single local user.)
 
 ## Limitations & trade-offs
 
@@ -159,8 +228,10 @@ key; `nopii` forwards auth headers untouched and never stores them.
   patterns, and grow the fixture set. Review only sanitized samples.
 - **Latency.** Each redacted request runs local NER inference (a few ms–seconds
   for long prompts). The model is warmed at startup to avoid cold-start spikes.
-- **Auth.** Validated for API-key auth via `ANTHROPIC_BASE_URL`. Subscription/OAuth
-  flows are forwarded as-is but not the intended path.
+- **Auth.** Two modes via `AUTH_MODE`: `passthrough` (API key, forwarded untouched) and
+  `oauth` (your Pro/Max subscription, tokens held and refreshed by nopii — see *Auth*
+  above). Both are verified end-to-end for the **`claude` CLI**; Claude Desktop/VS Code
+  don't route through the proxy.
 - **Fail-closed by default.** If detection errors, the request is blocked so PII
   cannot leak. Flip `FAIL_OPEN=true` only if availability matters more than privacy.
 - **Mapping is in-process and request-scoped.** No PII is persisted. In a

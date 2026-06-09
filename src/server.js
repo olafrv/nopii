@@ -15,6 +15,7 @@ import { redactRequestBody } from "./redact-messages.js";
 import { rehydrateDeep } from "./privacy.js";
 import { pipeSSEWithRehydration } from "./sse-rehydrate.js";
 import { warmup } from "./ner.js";
+import { getAccessToken, forceRefresh, hasCredentials } from "./oauth.js";
 
 const UPSTREAM = (process.env.ANTHROPIC_UPSTREAM_URL || "https://api.anthropic.com").replace(/\/$/, "");
 const PORT = Number(process.env.PORT || 8788);
@@ -22,6 +23,13 @@ const PORT = Number(process.env.PORT || 8788);
 // Set FAIL_OPEN=true to forward the original prompt on detection errors instead.
 const FAIL_OPEN = process.env.FAIL_OPEN === "true";
 const DEBUG = process.env.NODE_ENV !== "production" && process.env.DEBUG === "true";
+// DEBUG_UNMASK logs the FULL original PII values in the token map (not just first/last
+// char). Explicit, deliberate opt-in for debugging detection — dev only, leaks PII to logs.
+const DEBUG_UNMASK = DEBUG && process.env.DEBUG_UNMASK === "true";
+// Auth mode: "passthrough" (default) forwards auth headers untouched; "oauth" makes
+// nopii inject its OWN Pro/Max subscription token (see src/oauth.js — run `pnpm run oauth-login`).
+const AUTH_MODE = process.env.AUTH_MODE === "oauth" ? "oauth" : "passthrough";
+const OAUTH_BETA = "oauth-2025-04-20"; // required for the API to accept an OAuth Bearer
 
 const app = express();
 app.disable("x-powered-by");
@@ -29,8 +37,13 @@ app.use(express.raw({ type: "*/*", limit: "100mb" }));
 
 app.get("/healthz", (_req, res) => res.json({ ok: true, upstream: UPSTREAM }));
 
-// Headers we must not forward verbatim (recomputed or hop-by-hop).
+// Headers we must not forward verbatim (recomputed or hop-by-hop). In oauth mode we
+// also drop the client's auth — nopii supplies its own OAuth Bearer instead.
 const STRIP_REQ_HEADERS = new Set(["host", "content-length", "accept-encoding", "connection"]);
+if (AUTH_MODE === "oauth") {
+  STRIP_REQ_HEADERS.add("authorization");
+  STRIP_REQ_HEADERS.add("x-api-key");
+}
 const STRIP_RES_HEADERS = new Set([
   "content-encoding",
   "content-length",
@@ -52,6 +65,29 @@ function isMessagesRequest(req) {
   return req.method === "POST" && /\/v1\/messages(\/count_tokens)?\/?$/.test(req.path);
 }
 
+// Mask a PII value for DEBUG logs: reveal only the first and last char so redaction can
+// be eyeballed without writing the original value (or even its length) to the logs.
+function maskValue(v) {
+  if (typeof v !== "string" || v.length < 2) return "…";
+  return `${v[0]}…${v[v.length - 1]}`;
+}
+
+// Inject nopii's own OAuth Bearer (oauth mode only). Claude Code authed to us with a
+// placeholder key, so every forwarded request needs the real subscription token. For
+// the messages endpoints we also ensure `anthropic-beta` carries the oauth marker
+// (preserving Claude Code's own beta tokens). System prompt / user-agent / fingerprints
+// are already authentic because the client IS Claude Code — no cloaking needed.
+async function applyOAuthAuth(headers, isMessages) {
+  headers["authorization"] = `Bearer ${await getAccessToken()}`;
+  if (!isMessages) return;
+  const existing = (headers["anthropic-beta"] || "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (!existing.includes(OAUTH_BETA)) existing.push(OAUTH_BETA);
+  headers["anthropic-beta"] = existing.join(",");
+}
+
 app.all(/.*/, async (req, res) => {
   const target = UPSTREAM + req.originalUrl;
   const headers = buildForwardHeaders(req.headers);
@@ -65,10 +101,19 @@ app.all(/.*/, async (req, res) => {
       const parsed = JSON.parse(rawBody.toString("utf8"));
       const { body, mapping: m, count } = await redactRequestBody(parsed);
       if (count > 0) {
-        const json = JSON.stringify(body);
-        outBody = Buffer.from(json, "utf8");
+        outBody = Buffer.from(JSON.stringify(body), "utf8");
         mapping = m;
-        if (DEBUG) console.error(`[nopii] redacted ${count} PII span(s) on ${req.path}`);
+        if (DEBUG) {
+          // Masked mapping (token -> first…last char of the original) so detection can be
+          // eyeballed without writing full PII values into the logs.
+          const map = {};
+          for (const [token, value] of Object.entries(m)) {
+            map[token] = DEBUG_UNMASK ? value : maskValue(value);
+          }
+          console.error(
+            `[nopii] redacted ${count} PII span(s) on ${req.path}: ${JSON.stringify(map)}`,
+          );
+        }
       }
     } catch (err) {
       console.error("[nopii] redaction error:", err.message);
@@ -87,14 +132,40 @@ app.all(/.*/, async (req, res) => {
 
   if (outBody) headers["content-length"] = Buffer.byteLength(outBody).toString();
 
-  let upstream;
-  try {
-    upstream = await fetch(target, {
+  if (AUTH_MODE === "oauth") {
+    try {
+      await applyOAuthAuth(headers, isMessagesRequest(req));
+    } catch (err) {
+      console.error("[nopii] oauth:", err.message);
+      return res.status(401).json({
+        type: "error",
+        error: { type: "authentication_error", message: err.message },
+      });
+    }
+  }
+
+  const doFetch = () =>
+    fetch(target, {
       method: req.method,
       headers,
       body: req.method === "GET" || req.method === "HEAD" ? undefined : outBody,
       duplex: "half",
     });
+
+  let upstream;
+  try {
+    upstream = await doFetch();
+    // Reactive refresh: a 401 in oauth mode usually means the access token went stale.
+    // Refresh once and retry — but only once, so a second 401 never burns a freshly
+    // rotated refresh token.
+    if (upstream.status === 401 && AUTH_MODE === "oauth") {
+      try {
+        headers["authorization"] = `Bearer ${await forceRefresh()}`;
+        upstream = await doFetch();
+      } catch (err) {
+        console.error("[nopii] oauth refresh on 401 failed:", err.message);
+      }
+    }
   } catch (err) {
     console.error("[nopii] upstream fetch failed:", err.message);
     return res.status(502).json({
@@ -149,6 +220,13 @@ app.listen(PORT, async () => {
   console.log(`[nopii] proxy listening on http://localhost:${PORT} -> ${UPSTREAM}`);
   console.log(`[nopii] point Claude Code at it:  ANTHROPIC_BASE_URL=http://localhost:${PORT} claude`);
   console.log(`[nopii] fail mode: ${FAIL_OPEN ? "FAIL_OPEN (forwards on error)" : "FAIL_CLOSED (blocks on error)"}`);
+  console.log(`[nopii] auth mode: ${AUTH_MODE}`);
+  if (DEBUG_UNMASK) {
+    console.warn("[nopii] DEBUG_UNMASK=true — logging FULL PII values. Dev only; never in prod.");
+  }
+  if (AUTH_MODE === "oauth" && !hasCredentials()) {
+    console.warn("[nopii] AUTH_MODE=oauth but no credentials found — run `pnpm run oauth-login` first.");
+  }
   await warmup();
   console.log("[nopii] GLiNER model ready.");
 });

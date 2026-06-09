@@ -10,6 +10,8 @@ Paths below are relative to the repository root.
 | `src/privacy.js` | Deterministic token gen, `scrubText`, `rehydrate`/`rehydrateDeep`. |
 | `src/redact-messages.js` | Walks the Anthropic request body; redacts **user-role messages only**. |
 | `src/sse-rehydrate.js` | Incremental rehydration of the streaming SSE response. |
+| `src/oauth.js` | OAuth lifecycle for `AUTH_MODE=oauth`: PKCE browser login, token store (`~/.nopii`), proactive + single-flight refresh, `getAccessToken`/`forceRefresh`. |
+| `src/oauth-login.js` | CLI entry for the one-time `pnpm run oauth-login` browser flow. |
 | `test/` | `leak-check.js` (needs model), `rehydrate.test.js` (no model). Imports from `../src/`. |
 | `pnpm-node-pin-sync.sh` | Writes `package.json` `engines.node` from `.nvmrc` (the single source of truth for the Node version). Run via `pnpm run sync:node-pin` after editing `.nvmrc`. See `PNPM_SECURITY.md`. |
 

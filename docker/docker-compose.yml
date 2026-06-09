@@ -1,0 +1,52 @@
+# Run nopii + Claude Code together in containers, isolated from your host's claude login.
+# Lives in docker/; the build context and host paths below resolve to the repo root (..).
+#
+#   1. (host, once, only for AUTH_MODE=oauth)   pnpm run oauth-login
+#        -> mints subscription tokens into ~/.nopii (the browser flow needs a host browser)
+#   2. ./run-claude.sh                           (from repo root; wraps the compose call)
+#        -> builds if needed, starts the proxy, drops you into Claude Code
+#   3. docker compose -f docker/docker-compose.yml down   -> stop the proxy when finished
+#
+# Which credential is used follows AUTH_MODE in .env:
+#   oauth       -> your Pro/Max subscription, injected by nopii (placeholder API key)
+#   passthrough -> your real ANTHROPIC_API_KEY from your shell, forwarded untouched (default)
+services:
+  proxy:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    env_file: ../.env
+    environment:
+      PORT: "8788"
+    volumes:
+      - ../src:/app/src:ro                 # live code (no rebuild needed for src edits)
+      - ../model:/app/model                # GLiNER weights + tokenizer cache (rw: cache is written here)
+      - ${HOME}/.nopii:/root/.nopii        # OAuth tokens (rw so token refresh persists); from `pnpm run oauth-login`
+    ports:
+      - "8788:8788"                        # optional: also reachable from the host (curl /healthz)
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://localhost:8788/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  claude:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.claude
+    depends_on:
+      proxy:
+        condition: service_healthy
+    env_file: ../.env                      # supplies AUTH_MODE (proxy config — never the API key)
+    environment:
+      ANTHROPIC_BASE_URL: http://proxy:8788    # targets the proxy service (overrides any .env value)
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}  # passthrough: inherited from your host shell; oauth: ignored (placeholder used)
+    # Nothing mounted: fully isolated, ephemeral claude. It never touches your host's
+    # ~/.claude login, and every run starts clean. (It also can't see your repo — this
+    # is for exercising the proxy/auth path, not editing host files.)
+    stdin_open: true
+    tty: true

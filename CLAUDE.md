@@ -11,6 +11,9 @@ When you change the code, update the docs in the same task — don't leave them 
 - **`.env.example`** — a new/renamed/removed env var → update here **and** the config tables.
 - **`src/FILES.md`** — the single layout source: file layout, module roles, cwd/model-path
   gotcha. A new/moved/repurposed file → update here.
+- **`docs/INTERNALS.md`** — the developer's how-it-works guide: request lifecycle, redaction
+  scope, detection, tokenization, rehydration, auth modes, failure semantics. When you
+  change any of those behaviors, update the relevant section.
 
 Treat a PR that changes behavior without updating docs as incomplete.
 
@@ -56,9 +59,19 @@ pnpm dev                             # start with --watch + .env
 pnpm start                           # start (prod)
 pnpm test                            # GLiNER leak-check — REQUIRES model weights
 node --test test/rehydrate.test.js   # rehydration logic — no model needed
+pnpm run oauth-login                 # one-time OAuth login (AUTH_MODE=oauth); writes ~/.nopii
+                                     # NB: `pnpm login` is pnpm's npm-registry builtin — must use `run`
 ```
 
 Run end-to-end: `ANTHROPIC_BASE_URL=http://localhost:8788 ANTHROPIC_API_KEY=sk-ant-... claude`
+(OAuth: `pnpm run oauth-login`, then `AUTH_MODE=oauth pnpm start` with a placeholder `ANTHROPIC_API_KEY`.)
+
+Containerised (proxy + claude, isolated from the host claude login):
+`./run-claude.sh` (= `docker compose -f docker/docker-compose.yml run --rm --build claude`;
+auth follows `AUTH_MODE` in `.env` via `docker/claude-entrypoint.sh`). All Docker files
+live in `docker/` (build context is the repo root); `.dockerignore` stays at the root
+because Docker only reads it from the context root. Stop the proxy with
+`docker compose -f docker/docker-compose.yml down`.
 
 ## Invariants — keep these true when editing
 
@@ -73,8 +86,15 @@ Run end-to-end: `ANTHROPIC_BASE_URL=http://localhost:8788 ANTHROPIC_API_KEY=sk-a
   **`input_json_delta`** which must be **JSON-escaped** so tool-call JSON stays valid.
   Plain `text_delta` uses the raw value.
 - **Never break the API path.** Non-`/v1/messages` requests are transparent passthrough.
-  Auth headers are forwarded untouched. If nothing was redacted (`mapping` null), the
-  response streams straight through with zero parsing.
+  If nothing was redacted (`mapping` null), the response streams straight through with
+  zero parsing.
+- **Auth has two modes (`AUTH_MODE`).** Default `passthrough`: the client's auth header
+  is forwarded **untouched**. `oauth`: nopii strips the client's `authorization`/`x-api-key`
+  and injects its **own** Pro/Max subscription Bearer (`src/oauth.js`), adding
+  `oauth-2025-04-20` to `anthropic-beta` on messages requests. OAuth is a **header-only**
+  concern — it must not touch message content; the redaction/rehydration path is identical
+  in both modes. Don't reintroduce forwarding the client auth in oauth mode (it would leak
+  a placeholder key and break the OAuth grant).
 - **Fail closed by default.** On a detection error the request is blocked (400), not
   forwarded. `FAIL_OPEN=true` forwards the original (leaks PII) — only for availability.
 
@@ -97,7 +117,26 @@ Run end-to-end: `ANTHROPIC_BASE_URL=http://localhost:8788 ANTHROPIC_API_KEY=sk-a
   `node_modules`. First run still needs network for the tokenizer; offline thereafter.
 - `pnpm audit` flags vulns in `@xenova/transformers`; its network/model-download code is
   not in the redaction request path.
-- Validated for **API-key auth**. OAuth/subscription is forwarded as-is but untested.
+- **Detection tuning.** `GLINER_THRESHOLD` defaults to `0.5`; below ~0.4 GLiNER tags
+  pronouns/common words ("I", "you", "hello", "user") as PERSON. `src/ner.js` also keeps a
+  `STOPWORDS` denylist that drops those regardless of score (zero recall cost on real
+  names) — extend it if new false positives show up. After changing either, re-run
+  `pnpm test` (the GLiNER leak-check) since both affect recall.
+- **API-key auth** (`passthrough`) is the validated default. **OAuth** (`AUTH_MODE=oauth`)
+  uses the well-known public Claude Code OAuth values in `src/oauth.js`: client_id
+  `9d1c250a-e61b-44d9-88ed-5944d1962f5e`, authorize `claude.ai/oauth/authorize`, token
+  endpoint `api.anthropic.com/v1/oauth/token`, PKCE S256, localhost callback `:54545`.
+  Tokens persist (plaintext, mode 0600) at `~/.nopii/credentials.json`
+  (`NOPII_CREDENTIALS_DIR`). Refresh is single-flight + proactive (5-min lead) with a
+  one-shot reactive retry on upstream 401; if the refresh token is dead, the proxy
+  surfaces a 401 telling the user to `pnpm run oauth-login` again (the script is named
+  `oauth-login`, **not** `login`, because `pnpm login` is pnpm's npm-registry builtin and
+  would shadow a `login` script). **Verified working end-to-end (2026-06-09)** for the
+  Claude Code CLI with the minimal scopes `user:inference user:profile` and **no**
+  `?beta=true` on the URL — the `oauth-2025-04-20` beta header alone is sufficient. Those
+  two (scopes, beta marker) remain the parts most likely to break if Anthropic changes
+  the flow. Still unexercised: token **refresh** (proactive 5-min-lead + reactive 401
+  retry) — only triggers once the access token nears expiry.
 
 ## Config
 
@@ -107,4 +146,10 @@ Run end-to-end: `ANTHROPIC_BASE_URL=http://localhost:8788 ANTHROPIC_API_KEY=sk-a
 `GLINER_TOKENIZER` (default `onnx-community/gliner_medium-v2.1`), `GLINER_CACHE_DIR`
 (default `model/.cache` — where the auto-fetched tokenizer caches), `GLINER_THRESHOLD`,
 `GLINER_ENTITIES`. Set `NODE_ENV=development DEBUG=true` to log redacted-span **counts**
-(never values).
+plus a **masked token→value map** (e.g. `<PERSON_xxxxxxxx>: "S…n"` — only the first/last
+char of each value, via `maskValue` in `src/server.js`; never the full original).
+`DEBUG_UNMASK=true` (requires `DEBUG`) logs the **full** original values instead — a
+deliberate dev-only opt-in that leaks PII to logs (startup warns); never in prod. Auth: `AUTH_MODE` (`passthrough` default | `oauth`), `NOPII_CREDENTIALS_DIR`
+(default `~/.nopii`); OAuth internals overridable via `OAUTH_*` (`OAUTH_SCOPES`,
+`OAUTH_CALLBACK_PORT`, `OAUTH_REFRESH_LEAD_MS`, `OAUTH_CLIENT_ID`, `OAUTH_TOKEN_URL`,
+`OAUTH_AUTHORIZE_URL`).

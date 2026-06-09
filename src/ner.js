@@ -83,7 +83,25 @@ function isValidEmail(email) {
   return true;
 }
 
-const THRESHOLD = process.env.GLINER_THRESHOLD ? Number(process.env.GLINER_THRESHOLD) : 0.1;
+const THRESHOLD = process.env.GLINER_THRESHOLD ? Number(process.env.GLINER_THRESHOLD) : 0.5;
+
+// Words GLiNER routinely mislabels as PERSON (pronouns, conversational filler, the
+// chat role names). These are never PII, so drop them regardless of confidence — a
+// deterministic guard that costs no recall on real names. Matched case-insensitively
+// against the whole span.
+const STOPWORDS = new Set([
+  "i", "you", "he", "she", "it", "we", "they",
+  "me", "him", "her", "us", "them",
+  "my", "your", "his", "its", "our", "their",
+  "mine", "yours", "hers", "ours", "theirs",
+  "myself", "yourself", "himself", "herself", "itself", "ourselves", "themselves", "yourselves",
+  "user", "users", "assistant", "claude", "human", "ai",
+  "hello", "hi", "hey", "thanks", "thank", "please", "ok", "okay", "yes", "no",
+]);
+
+function isStopword(text) {
+  return STOPWORDS.has(text.trim().toLowerCase());
+}
 
 export async function detectEntities(text) {
   if (!text || !text.trim()) return [];
@@ -108,6 +126,7 @@ export async function detectEntities(text) {
       text: text.slice(span.start, span.end),
     }))
     .filter((entity) => (entity.type === "EMAIL" ? isValidEmail(entity.text) : true))
+    .filter((entity) => !isStopword(entity.text))
     .map(({ type, start, end }) => ({ type, start, end }));
 
   const regexEntities = [];
