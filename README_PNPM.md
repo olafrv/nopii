@@ -1,4 +1,4 @@
-# pnpm Supply-Chain Security
+# pnpm Security Rules
 
 This project follows the recommendations in
 [pnpm's Supply Chain Security guide](https://pnpm.io/supply-chain-security).
