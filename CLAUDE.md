@@ -101,7 +101,7 @@ the file — so always run from the project root (`npm` scripts already do).
   `model/gliner_medium-v2.1/onnx/model_fp16.onnx` (`<repo>/onnx/<variant>` layout;
   see `model/README.md`) or `src/ner.js`/`npm test` fail. The model is warmed at startup;
   warmup failure is non-fatal (logged), but redaction will then error → fail-closed block.
-- `gliner` is pinned to `^0.0.19` (no 0.1.x exists). API: `new Gliner({tokenizerPath,
+- `gliner` is pinned to exact `0.0.19` (no 0.1.x exists; all deps are exact-pinned per README_PNPM.md). API: `new Gliner({tokenizerPath,
   onnxSettings:{modelPath}})`, `await initialize()`, `inference({texts, entities, ...})`.
 - The `objc[...] Class CoreMLExecution is implemented in both...` startup line is a
   harmless onnxruntime dylib-duplication warning. Ignore.

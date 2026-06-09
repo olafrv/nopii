@@ -9,13 +9,13 @@ importers:
   .:
     dependencies:
       '@xenova/transformers':
-        specifier: ^2.17.2
+        specifier: 2.17.2
         version: 2.17.2
       express:
-        specifier: ^4.19.2
+        specifier: 4.22.2
         version: 4.22.2
       gliner:
-        specifier: ^0.0.19
+        specifier: 0.0.19
         version: 0.0.19(onnxruntime-node@1.19.2)
 
 packages:

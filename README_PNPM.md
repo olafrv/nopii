@@ -53,6 +53,15 @@ settings) and `.npmrc` (registry/auth only).
   mitigation — it surfaces incompatible/missing peers instead of silently
   installing a mismatched tree.
 
+### 9. Exact Version Pinning
+- `saveExact: true` makes **future** `pnpm add` write exact versions.
+- It does **not** rewrite existing ranges, so **all `dependencies` /
+  `devDependencies` in `package.json` must be pinned exactly** — no `^` or `~`.
+  A range lets `pnpm update` (or a fresh resolve) pull a different version than
+  the one reviewed, widening the typosquat / malicious-release window.
+- Bump versions deliberately (`pnpm update <pkg>` then review the lockfile diff),
+  never via a floating range.
+
 ---
 
 ## Setup Instructions
@@ -129,7 +138,8 @@ allowBuilds:               # MAP of package -> allow(true)/disallow(false)
 
 | Risk | Mitigation |
 |------|-----------|
-| Typosquatting | Lockfile + explicit, pinned dependencies |
+| Typosquatting | Lockfile + exact-pinned dependencies (no `^`/`~`) |
+| Unreviewed version drift | Exact pins + `saveExact: true` |
 | Malicious install scripts | Build scripts blocked by default; `allowBuilds` whitelist |
 | Freshly compromised releases | `minimumReleaseAge` quarantine window |
 | Non-registry / tampered sub-deps | `blockExoticSubdeps: true` |
@@ -148,3 +158,5 @@ allowBuilds:               # MAP of package -> allow(true)/disallow(false)
 4. **Use `--frozen-lockfile` in CI/production.**
 5. **Add to `allowBuilds` deliberately** — never `dangerouslyAllowAllBuilds`.
 6. **Keep pnpm updated** via the `packageManager` field + Corepack.
+7. **Pin every dependency exactly** — no `^`/`~` in `package.json`; bump via
+   `pnpm update <pkg>` and review the lockfile diff.
