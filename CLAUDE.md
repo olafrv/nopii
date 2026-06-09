@@ -17,21 +17,17 @@ README's limitations. Treat a PR that changes behavior without updating docs as 
 
 ## Package management — MANDATORY
 
-**`PNPM_SECURITY.md` is binding policy, not a suggestion. STOP and read it before you
-add, remove, or update any dependency, touch `pnpm-lock.yaml`, or edit
-`pnpm-workspace.yaml` — then comply with every rule in it.** The non-negotiable core:
-**pnpm only** (never `npm`/`yarn`), **no `package-lock.json`**, and **never**
-`dangerouslyAllowAllBuilds`. Any change that violates `PNPM_SECURITY.md` is wrong and
-must not be committed.
+`PNPM_SECURITY.md` is binding policy. **Read it before any dependency, `pnpm-lock.yaml`,
+or `pnpm-workspace.yaml` change, then obey every rule.** A change that violates it must
+not be committed.
 
-`PNPM_SECURITY.md` is **human-owned and read-only for Claude** — hard-blocked by an
-`Edit`/`Write` deny rule in `.claude/settings.json`. Never edit it. If a change needs
-the policy amended, **propose** the diff in your response and let a human apply it.
-
-That deny rule is the enforcement; without it the file is editable. So whenever you
-touch `.claude/settings.json` or notice it changed, **verify** the `deny` list still
-contains `Edit(PNPM_SECURITY.md)` and `Write(PNPM_SECURITY.md)`. If either is missing
-or weakened, flag it and propose restoring it — never silently leave it removed.
+- **Core rules:** pnpm only (never `npm`/`yarn`), no `package-lock.json`, never
+  `dangerouslyAllowAllBuilds`.
+- **`PNPM_SECURITY.md` is read-only for you** — denied in `.claude/settings.json`. Don't
+  edit it; propose the diff and let a human apply it.
+- **Protect the deny rule.** When `.claude/settings.json` changes, confirm its `deny`
+  list still has `Edit(PNPM_SECURITY.md)` and `Write(PNPM_SECURITY.md)`; if not, flag it
+  and propose restoring it.
 
 ## What this is
 
