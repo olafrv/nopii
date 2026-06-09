@@ -7,8 +7,6 @@ When you change the code, update the docs in the same task — don't leave them 
 - **`README.md`** — user-facing: setup, `ANTHROPIC_BASE_URL` usage, config table, deploy.
 - **`CLAUDE.md`** (this file) — architecture, invariants, commands, gotchas.
 - **`.env.example`** — add/rename/remove env vars here whenever you touch config.
-- **`PNPM_SECURITY.md`** — package-management & supply-chain-security policy. Read-only
-  for Claude (see Package management below).
 - **`src/FILES.md`** — file layout, what each module does, and the cwd/model-path
   gotcha. Update when you add, move, or repurpose a file.
 
@@ -29,6 +27,11 @@ must not be committed.
 `PNPM_SECURITY.md` is **human-owned and read-only for Claude** — hard-blocked by an
 `Edit`/`Write` deny rule in `.claude/settings.json`. Never edit it. If a change needs
 the policy amended, **propose** the diff in your response and let a human apply it.
+
+That deny rule is the enforcement; without it the file is editable. So whenever you
+touch `.claude/settings.json` or notice it changed, **verify** the `deny` list still
+contains `Edit(PNPM_SECURITY.md)` and `Write(PNPM_SECURITY.md)`. If either is missing
+or weakened, flag it and propose restoring it — never silently leave it removed.
 
 ## What this is
 

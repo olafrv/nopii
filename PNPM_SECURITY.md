@@ -25,6 +25,11 @@ must not be committed.
 `PNPM_SECURITY.md` is **human-owned and read-only for Claude** — hard-blocked by an
 `Edit`/`Write` deny rule in `.claude/settings.json`. Never edit it. If a change needs
 the policy amended, **propose** the diff in your response and let a human apply it.
+
+That deny rule is the enforcement; without it the file is editable. So whenever you
+touch `.claude/settings.json` or notice it changed, **verify** the `deny` list still
+contains `Edit(PNPM_SECURITY.md)` and `Write(PNPM_SECURITY.md)`. If either is missing
+or weakened, flag it and propose restoring it — never silently leave it removed.
 ```
 
 ## Best Practices
