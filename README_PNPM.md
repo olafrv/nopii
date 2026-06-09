@@ -87,8 +87,6 @@ once a CI/CD pipeline runs them:
 
 ## Setup Instructions
 
-See the [README](./README.md) for what this project does and how to run it.
-
 Install pnpm (via Corepack, bundled with Node) and the Node version pinned in
 `.nvmrc`:
 
