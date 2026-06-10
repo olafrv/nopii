@@ -67,12 +67,22 @@ Run end-to-end: `ANTHROPIC_BASE_URL=http://localhost:8788 ANTHROPIC_API_KEY=sk-a
 (OAuth: `pnpm run oauth-login`, then `AUTH_MODE=oauth pnpm start` with a placeholder `ANTHROPIC_API_KEY`.)
 
 Containerised (proxy + claude, isolated from the host claude login):
-`./claude-nopii.sh start` (= `docker compose -f docker/docker-compose.yml run --rm --build
-claude`) drops you into claude; `./claude-nopii.sh log` (= `… logs proxy`; add `-f` to follow) prints the proxy logs;
-`./claude-nopii.sh stop` (= `… down`) tears it down. `start` is the default subcommand; args
-after it pass through to claude. Auth follows `AUTH_MODE` in `.env` via
-`docker/claude-entrypoint.sh`. All Docker files live in `docker/` (build context is the repo
-root); `.dockerignore` stays at the root because Docker only reads it from the context root.
+`./claude-nopii.sh start` (= `docker compose -f docker/docker-compose.yml run --rm claude`)
+drops you into claude — **no `--build`**, so compose builds only if the image is missing and
+repeat starts are instant; run `./claude-nopii.sh build` (= `… build`) after changing
+deps/Dockerfiles. `./claude-nopii.sh log` (= `… logs proxy`; add `-f` to follow) prints the
+proxy logs; `./claude-nopii.sh stop` (= `… down`) tears it down. `start` is the default
+subcommand; args after it pass through to claude. Auth follows `AUTH_MODE` in `.env` via
+`docker/claude-entrypoint.sh`. The claude service does **not** load `.env` (that would leak
+proxy-only vars like `DEBUG`/`NODE_ENV` into the CLI and force it verbose) — it gets an
+explicit env allowlist, and `claude-nopii.sh` exports `AUTH_MODE` from `.env` for compose
+interpolation. Claude's own state persists in repo-local, gitignored `data/.claude/`
+(→ `/root/.claude`) **and** `data/.claude.json` (→ `/root/.claude.json`, where claude keeps
+onboarding/theme/API-key/folder-trust answers — without it claude re-onboards every start;
+the wrapper seeds it as a file so Docker doesn't bind an empty dir) — isolated from the host
+`~/.claude` but not ephemeral.
+All Docker files live in `docker/` (build context is the repo root); `.dockerignore` stays
+at the root because Docker only reads it from the context root.
 
 ## Invariants — keep these true when editing
 

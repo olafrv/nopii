@@ -7,3 +7,8 @@ npm-debug.log
 .vscode
 .remember
 test
+
+# Written at runtime — keep them out of the build context so they don't invalidate
+# the `COPY . .` layer (proxy Dockerfile) on every run.
+data
+model/.cache

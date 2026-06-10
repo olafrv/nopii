@@ -5,6 +5,12 @@ node_modules/
 # Local tooling state
 .remember/
 
+# Persisted Claude Code container state (data/.claude{,.json} are bind-mounted into the
+# claude container; keep the dir, ignore the persisted state)
+/data/.claude/*
+!/data/.claude/.gitkeep
+/data/.claude.json
+
 # Model artifacts (not committed — see model/README.md)
 model/**/*.onnx
 model/.cache/

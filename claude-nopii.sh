@@ -2,8 +2,9 @@
 # Host launcher for the containerised nopii proxy + Claude Code, isolated from your
 # host's claude login. Auth follows AUTH_MODE in .env.
 #
-#   ./claude-nopii.sh [start]         # build if needed, start the proxy, drop into claude
+#   ./claude-nopii.sh [start]         # start the proxy + drop into claude (builds once if missing)
 #   ./claude-nopii.sh start --help    # extra args after `start` pass straight to claude
+#   ./claude-nopii.sh build           # rebuild the images (after changing deps/Dockerfiles)
 #   ./claude-nopii.sh log [-f]        # print proxy logs; pass -f to follow (Ctrl-C to detach)
 #   ./claude-nopii.sh stop            # stop the proxy and tear down the containers
 #
@@ -28,7 +29,18 @@ case "$cmd" in
     # .env is proxy-only and the proxy reads it via its own env_file.
     AUTH_MODE="$(grep -E '^[[:space:]]*AUTH_MODE=' .env | tail -n1 | cut -d= -f2- | tr -d '[:space:]')"
     export AUTH_MODE
-    exec "${COMPOSE[@]}" run --rm --build claude "$@"
+    # claude's onboarding state lives in ~/.claude.json. We bind-mount data/.claude.json
+    # to persist it; it must already be a file or Docker would mount an empty dir there
+    # (which makes claude re-onboard, or fail). Seed it once.
+    mkdir -p data/.claude
+    [ -e data/.claude.json ] || printf '{}\n' > data/.claude.json
+    # No --build: compose builds the image only if it's missing, so repeat starts are
+    # instant. Run `./claude-nopii.sh build` after changing deps/Dockerfiles. (src and
+    # model are volume-mounted, so code/weight edits never need a rebuild.)
+    exec "${COMPOSE[@]}" run --rm claude "$@"
+    ;;
+  build)
+    exec "${COMPOSE[@]}" build "$@"
     ;;
   stop)
     exec "${COMPOSE[@]}" down
@@ -38,10 +50,10 @@ case "$cmd" in
     exec "${COMPOSE[@]}" logs "$@" proxy
     ;;
   -h|--help|help)
-    sed -n '2,10p' "$0" | sed 's/^# \{0,1\}//'
+    sed -n '2,11p' "$0" | sed 's/^# \{0,1\}//'
     ;;
   *)
-    echo "Unknown command: $cmd (expected: start | stop | log)" >&2
+    echo "Unknown command: $cmd (expected: start | build | stop | log)" >&2
     exit 1
     ;;
 esac
