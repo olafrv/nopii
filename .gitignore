@@ -2,6 +2,9 @@ node_modules/
 .env
 *.log
 
+# macOS cruft
+.DS_Store
+
 # Local tooling state
 .remember/
 
