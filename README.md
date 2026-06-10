@@ -15,8 +15,9 @@ Code and `api.anthropic.com`. It detects PII locally (GLiNER + regex), replaces 
 with stable placeholder tokens, forwards the sanitized request to Claude, and
 restores the original values in Claude's response so your experience is unchanged.
 
-> **WARNING:** `ANTHROPIC_BASE_URL` redirection is a **`claude` CLI or Agent SDK** feature — Claude Desktop and
-the VS Code extension do not honour that variable, so they can't be routed to the `nopii` proxy.
+> **WARNING:** `ANTHROPIC_BASE_URL` redirection is a **`claude` CLI or Agent SDK** feature — Claude Desktop,
+the VS Code extension, and the **claude.ai web app** do not honour that variable, so none of them can be
+routed to the `nopii` proxy.
 
 ## What gets redacted
 
@@ -251,13 +252,29 @@ docker build -t nopii -f docker/Dockerfile .
 docker run -p 8788:8788 nopii
 ```
 
-Teammates set `ANTHROPIC_BASE_URL=https://your-host:8788`. Run it behind TLS and
-restrict network access — the proxy sees raw prompts in memory (that's the point),
-so treat the host as sensitive. In the default `passthrough` mode each user still
-supplies their own Anthropic API key; `nopii` forwards auth headers untouched and
-never stores them. (Don't deploy `AUTH_MODE=oauth` as a shared server — it would
-bill every request to one subscription and exposes that account's tokens; oauth mode
-is meant for a single local user.)
+Teammates set `ANTHROPIC_BASE_URL=https://your-host:8788`.
+
+**Is multi-user on one endpoint actually feasible?** Yes — but **only in
+`passthrough` mode**, and with caveats. It works because nopii keeps **no per-user
+state**: each request carries its own Anthropic API key (forwarded untouched, never
+stored), and the redaction mapping is **request-scoped and deterministic**, so there
+is no cross-user state to leak or collide — concurrent users and multiple replicas
+are fine with no shared store. What you must accept before sharing the endpoint:
+
+- **The host sees every user's raw prompt in memory** (that's the whole point of the
+  proxy). The operator — and anything that can read the process — sees unredacted PII
+  for *all* users. Run it behind TLS, restrict network access, and treat the host as
+  sensitive. If `DEBUG` is on, its masked token→value logs span all users; never
+  enable it on a shared host.
+- **nopii has no authentication of its own.** Anyone who can reach the port can send
+  prompts through it (billed to whatever key they supply). Put it behind your own
+  network controls / a gateway — nopii won't gate access for you.
+- **No per-user isolation or rate limiting.** One user can't see another's mapping
+  (request-scoped), but there's no quota, tenancy, or audit boundary between them.
+
+Do **not** deploy `AUTH_MODE=oauth` as a shared server — it would bill every request
+to one subscription and exposes that account's tokens; oauth mode is meant for a
+single local user.
 
 ## Limitations & trade-offs
 
@@ -268,8 +285,15 @@ is meant for a single local user.)
   for long prompts). The model is warmed at startup to avoid cold-start spikes.
 - **Auth.** Two modes via `AUTH_MODE`: `passthrough` (API key, forwarded untouched) and
   `oauth` (your Pro/Max subscription, tokens held and refreshed by nopii — see *Auth*
-  above). Both are verified end-to-end for the **`claude` CLI**; Claude Desktop/VS Code
-  can't be routed through the proxy.
+  above). Both are verified end-to-end for the **`claude` CLI**; Claude Desktop, the VS
+  Code extension, and the claude.ai web app can't be routed through the proxy.
+- **Anthropic API only.** nopii is built for the Anthropic `/v1/messages` request shape
+  with bearer / `x-api-key` auth. Pointing `ANTHROPIC_UPSTREAM_URL` at a non-Anthropic
+  gateway such as **AWS Bedrock** (or Vertex) is **not a validated path** — their request
+  shape and signing (Bedrock uses SigV4, not a forwarded key) differ. And where such a
+  gateway authenticates with long-lived **cloud credentials**, those carry the same
+  *reaches-any-endpoint* PII surface as Option B's API key (the credential isn't what
+  protects your data — redaction is).
 - **Fail-closed by default.** If detection errors, the request is blocked so PII
   cannot leak. Flip `FAIL_OPEN=true` only if availability matters more than privacy.
 - **Mapping is in-process and request-scoped.** No PII is persisted. In a
