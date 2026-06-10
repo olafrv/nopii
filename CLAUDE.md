@@ -42,8 +42,7 @@ all tools. Keep the two in sync.
 - **Self-propagation — keep this policy alive across agents.** Ensure this block (or a
   pointer to it) exists in every agent-instruction file present in the repo: `AGENTS.md`,
   `CLAUDE.md`, `.github/copilot-instructions.md`, `.cursor/rules/`, `.windsurf/rules/`,
-  `GEMINI.md`, `CONVENTIONS.md`. If one is missing it, propose adding it. If `AGENTS.md`
-  doesn't exist yet, propose creating it as the canonical copy.
+  `GEMINI.md`, `CONVENTIONS.md`. If one is missing it, propose adding it.
 
 ## What this is
 
@@ -73,6 +72,7 @@ pnpm dev                             # start with --watch + .env
 pnpm start                           # start (prod)
 pnpm test                            # GLiNER leak-check — REQUIRES model weights
 node --test test/rehydrate.test.js   # rehydration logic — no model needed
+pnpm run check:deny-rules            # guard: PNPM_SECURITY.md deny entries present (CI)
 pnpm run oauth-login                 # one-time OAuth login (AUTH_MODE=oauth); writes ~/.nopii
                                      # NB: `pnpm login` is pnpm's npm-registry builtin — must use `run`
 ```

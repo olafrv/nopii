@@ -194,6 +194,15 @@ once a CI/CD pipeline runs them:
 - **Node-pin sync** — `pnpm run sync:node-pin && git diff --exit-code package.json`
   fails the build if `engines.node` is stale relative to `.nvmrc` (i.e. someone edited
   `.nvmrc` without re-running the sync). Catches a forgotten sync with no install/test hooks.
+- **Policy deny-rule guard** — asserts the `Edit(PNPM_SECURITY.md)` /
+  `Write(PNPM_SECURITY.md)` entries are still in `.claude/settings.json`'s
+  `permissions.deny`, failing the build if removed. A deny rule blocks an agent's
+  edit tools but not an out-of-band `sed`/`echo >`; this guard is the tamper-proof
+  backstop, run in CI where a human reviews the failure. Implemented in
+  `scripts/check-deny-rules.mjs`; run it with:
+  ```bash
+  pnpm run check:deny-rules
+  ```
 
 ---
 
