@@ -13,6 +13,7 @@ Paths below are relative to the repository root.
 | `src/oauth.js` | OAuth lifecycle for `AUTH_MODE=oauth`: PKCE browser login, token store (`~/.nopii`), proactive + single-flight refresh, `getAccessToken`/`forceRefresh`. |
 | `src/oauth-login.js` | CLI entry for the one-time `pnpm run oauth-login` browser flow. |
 | `test/` | `leak-check.js` (needs model), `rehydrate.test.js` (no model). Imports from `../src/`. |
+| `scripts/download-model.mjs` | Fetches the GLiNER ONNX weights from Hugging Face to the path `src/ner.js` expects (honours `GLINER_MODEL_PATH`; the destination filename selects the variant). Run via `pnpm run model:download`. See `model/README.md`. |
 | `scripts/sync-node-pin.mjs` | Writes `package.json` `engines.node` from `.nvmrc` (the single source of truth for the Node version). Run via `pnpm run sync:node-pin` after editing `.nvmrc`. See `PNPM_SECURITY.md`. |
 | `scripts/check-deny-rules.mjs` | CI guard asserting the `PNPM_SECURITY.md` `Edit`/`Write` deny entries are still in `.claude/settings.json`. Run via `pnpm run check:deny-rules`. See `PNPM_SECURITY.md`. |
 

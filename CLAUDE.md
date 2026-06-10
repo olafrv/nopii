@@ -68,6 +68,7 @@ hook-based redaction design.
 ```bash
 corepack enable                      # provides pnpm (pinned in package.json)
 pnpm install --frozen-lockfile       # install deps (Node version in .nvmrc)
+pnpm run model:download              # fetch GLiNER ONNX weights (~392 MB)
 pnpm dev                             # start with --watch + .env
 pnpm start                           # start (prod)
 pnpm test                            # GLiNER leak-check — REQUIRES model weights
@@ -125,10 +126,13 @@ at the root because Docker only reads it from the context root.
 
 ## Gotchas
 
-- **Model weights are not in the repo.** Download to
-  `model/gliner_medium-v2.1/onnx/model_fp16.onnx` (`<repo>/onnx/<variant>` layout;
-  see `model/README.md`) or `src/ner.js`/`pnpm test` fail. The model is warmed at startup;
-  warmup failure is non-fatal (logged), but redaction will then error → fail-closed block.
+- **Model weights are not in the repo.** Run `pnpm run model:download` (or download by
+  hand) to `model/gliner_medium-v2.1/onnx/model_fp16.onnx` (`<repo>/onnx/<variant>` layout;
+  see `model/README.md`) or `src/ner.js`/`pnpm test` fail. The download script
+  (`scripts/download-model.mjs`) resolves the destination from `GLINER_MODEL_PATH` exactly
+  like the runtime, and the destination filename selects the variant. The model is warmed at
+  startup; warmup failure is non-fatal (logged), but redaction will then error → fail-closed
+  block.
 - `gliner` is pinned to exact `0.0.19` (no 0.1.x exists; all deps are exact-pinned per PNPM_SECURITY.md). API: `new Gliner({tokenizerPath,
   onnxSettings:{modelPath}})`, `await initialize()`, `inference({texts, entities, ...})`.
 - The `objc[...] Class CoreMLExecution is implemented in both...` startup line is a

@@ -57,9 +57,12 @@ corepack enable               # provides pnpm (version pinned in package.json)
 pnpm install --frozen-lockfile
 cp .env.example .env          # options documented inline; adjust as needed
 
-# Download the GLiNER ONNX weights into model/  (see model/README.md)
-#   -> model/gliner_medium-v2.1/onnx/model_fp16.onnx
+# Download the GLiNER ONNX weights into model/ (~392 MB, not committed)
+pnpm run model:download       # -> model/gliner_medium-v2.1/onnx/model_fp16.onnx
 ```
+
+> Prefer to fetch the weights by hand, or grab a different variant? See
+> [model/README.md](./model/README.md).
 
 > This project uses **pnpm** with supply-chain-security controls — see
 > [PNPM_SECURITY.md](./PNPM_SECURITY.md). Use pnpm, not npm.
