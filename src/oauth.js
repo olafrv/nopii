@@ -198,7 +198,7 @@ export async function loginInteractive() {
       }
       const params = u.searchParams;
       const finish = (status, msg) => {
-        res.writeHead(status, { "content-type": "text/html" });
+        res.writeHead(status, { "content-type": "text/html; charset=utf-8" });
         res.end(`<html><body style="font-family:sans-serif"><h2>${msg}</h2>
 <p>You can close this tab and return to the terminal.</p></body></html>`);
         server.close();

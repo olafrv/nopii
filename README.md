@@ -52,6 +52,25 @@ the VS Code extension do not honour that variable, so they can't be routed to `n
 pnpm start
 ```
 
+> **What stops the PII leak here — and what doesn't.** The API key only authenticates
+> and bills the request; it is **not** what protects your data. nopii's redaction is —
+> the same sanitized request goes upstream regardless of which key you use. Unlike
+> Option B (where declining the `file upload` scope makes uploads impossible), an
+> Anthropic API key **cannot be scoped by capability or endpoint**: there is no
+> "inference-only, no files" key. A full-access key can reach any endpoint, so the
+> text-only redaction limit still applies — inline `image`/`document` blocks and
+> Files-API (`/v1/files`) uploads pass through unredacted (see Option B's corollary).
+>
+> **To avoid a leak:** keep PII out of pasted screenshots/PDFs and out of any
+> file-upload path, since nopii can only redact *text* in `text`/`tool_result` blocks.
+>
+> **Optional hardening (blast radius, not PII).** Anthropic keys *can* be scoped to a
+> [**workspace**](https://platform.claude.com/docs/en/manage-claude/workspaces) with its
+> own **spend** and **rate** limits, and set **read-only** vs **full access**. Create a
+> dedicated workspace with a low spend cap for nopii so a leaked or misused key can't run
+> up an unbounded bill or touch other projects. This limits financial/operational blast
+> radius — it does **not** change what data is sent (that's redaction's job).
+
 ### Option B — your Claude Pro/Max subscription (OAuth)
 
 Use your existing subscription instead of paying per token:
@@ -63,17 +82,42 @@ export AUTH_MODE=oauth
 pnpm start
 ```
 
-nopii reads Claude Code's authentic request (its system prompt, beta headers and
-fingerprints are real, since the client *is* Claude Code), swaps in your OAuth
-Bearer token, and refreshes it automatically (including a one-shot retry on a 401).
-When the refresh token finally expires, just `pnpm run oauth-login` again.
-
-> **Note:** it's `pnpm run oauth-login`, not `pnpm login` — `login` is a built-in
+> **PNPM login:** it's `pnpm run oauth-login`, not `pnpm login` — `login` is a built-in
 > pnpm command (it logs into the npm registry), so it would never run this script.
 
 > **Security note:** in oauth mode your subscription tokens are stored **in
 > plaintext** at `~/.nopii/credentials.json` (mode `0600`). Treat that file like a
 > password. Override the location with `NOPII_CREDENTIALS_DIR`.
+
+nopii reads Claude Code's authentic request (its system prompt, beta headers and
+fingerprints are real, since the client *is* Claude Code), swaps in your OAuth
+Bearer token, and refreshes it automatically (including a one-shot retry on a 401).
+When the refresh token finally expires, just `pnpm run oauth-login` again.
+
+The consent screen nopii shows is **shorter** than the one the real Claude Code CLI
+shows. That's intentional: nopii requests only the two scopes a redaction proxy needs
+(`user:inference user:profile`), so it can forward inference on your subscription and
+read your profile — nothing more. The capabilities Claude Code asks for but nopii does
+**not**:
+
+| Consent prompt line | Scope | Requested by nopii? |
+|---|---|---|
+| Contribute to your Claude subscription usage | `user:inference` | ✅ yes |
+| Access your Anthropic profile information | `user:profile` | ✅ yes |
+| Access your Claude Code sessions | session | ❌ no |
+| Use and manage your connectors | connectors | ❌ no |
+| Upload files on your behalf | file upload | ❌ no |
+
+Override the requested scopes with `OAUTH_SCOPES` if you ever need the broader grant.
+
+> **Corollary — declining `file upload` is protective, not a gap.** nopii redacts
+> *text only* (user-turn `text` and `tool_result` blocks of `/v1/messages`); it cannot
+> redact file contents. By not requesting the `file upload` scope, the OAuth token
+> simply *can't* upload files — so there is no unredacted file path in oauth mode. The
+> standing limitation is independent of OAuth: inline `image`/`document` blocks (e.g. a
+> pasted screenshot or PDF) are passed through unredacted, and in `passthrough` mode a
+> Files-API upload (`/v1/files`) is transparent passthrough too. File text that Claude
+> Code inlines into `tool_result`/`text` blocks *is* redacted.
 
 ## Setup
 
@@ -144,20 +188,25 @@ You get a reply with the real name and email restored.
 
 If you don't want nopii's setup to disturb the `claude` you already use (e.g. you're
 logged into claude.ai on the host), run both the proxy **and** Claude Code in
-containers. The containerised `claude` is **fully isolated** — nothing is mounted into
-it, so it never touches your host's `~/.claude` login and every run starts clean.
+containers. The containerised `claude` **never touches your host's `~/.claude` login** —
+its state lives in a repo-local, gitignored `data/.claude/` (history, project settings) plus
+`data/.claude.json` (onboarding: theme, API-key approval, folder trust) instead, so it stays
+isolated from your host while persisting across `stop`/`start` — no re-onboarding each run.
+(No source is mounted, so it can't see your repo either — this is for exercising the
+proxy/auth path, not editing host files.)
 
 ```bash
-./claude-nopii.sh start         # build if needed, start the proxy, drop into claude
+./claude-nopii.sh start         # start the proxy, drop into claude (builds once if missing)
                                 # `start` is the default; extra args pass through to claude
+./claude-nopii.sh build         # rebuild the images after changing deps/Dockerfiles
 ./claude-nopii.sh log           # print the proxy logs (add -f to follow)
 ./claude-nopii.sh stop          # tear down the proxy and containers when done
 ```
 
-Only the **proxy** mounts anything: your OAuth tokens from `~/.nopii` (read-write so
-token refresh persists), plus `./model` and live `./src`. To watch redaction happen,
-set `NODE_ENV=development` and `DEBUG=true` in `.env` (the proxy logs span **counts**
-only, never values) and run `./claude-nopii.sh log`.
+The **proxy** mounts your OAuth tokens from `~/.nopii` (read-write so token refresh
+persists), plus `./model` and live `./src`; **claude** mounts only `./data/.claude` and
+`./data/.claude.json` for its own state. To watch redaction happen, set `NODE_ENV=development` and `DEBUG=true` in `.env`
+(the proxy logs span **counts** only, never values) and run `./claude-nopii.sh log`.
 
 ## Tests
 
