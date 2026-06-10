@@ -11,6 +11,7 @@ import crypto from "node:crypto";
 import http from "node:http";
 import { spawn } from "node:child_process";
 import { homedir } from "node:os";
+import { fileURLToPath } from "node:url";
 import path from "node:path";
 import fs from "node:fs";
 
@@ -162,6 +163,30 @@ export function hasCredentials() {
 // Interactive browser login (PKCE authorization-code flow)
 // ---------------------------------------------------------------------------
 
+// Logo shown on the browser success page, inlined as a data URI so it renders
+// after the callback server has already closed (no second request to serve).
+function logoDataUri() {
+  try {
+    const file = fileURLToPath(new URL("./img/nopii-logo-auth.png", import.meta.url));
+    return `data:image/png;base64,${fs.readFileSync(file).toString("base64")}`;
+  } catch {
+    return null; // logo is decorative; fall back to text-only success page
+  }
+}
+
+// Centered success page: green headline + the nopii logo.
+function successPage() {
+  const logo = logoDataUri();
+  const img = logo
+    ? `<img src="${logo}" alt="nopii" style="max-width:320px;width:60%;height:auto;margin-top:1.5rem">`
+    : "";
+  return `<!doctype html><html><body style="font-family:sans-serif;text-align:center;\
+margin:0;padding:3rem 1rem"><h2 style="color:#16a34a;margin:0">\
+nopii — login successful ✓</h2>\
+<p style="margin:0.75rem 0 0">You can close this tab and return to the terminal.</p>\
+${img}</body></html>`;
+}
+
 function openBrowser(url) {
   const cmd =
     process.platform === "darwin" ? "open" : process.platform === "win32" ? "start" : "xdg-open";
@@ -199,8 +224,9 @@ export async function loginInteractive() {
       const params = u.searchParams;
       const finish = (status, msg) => {
         res.writeHead(status, { "content-type": "text/html; charset=utf-8" });
-        res.end(`<html><body style="font-family:sans-serif"><h2>${msg}</h2>
-<p>You can close this tab and return to the terminal.</p></body></html>`);
+        res.end(`<html><body style="font-family:sans-serif;text-align:center;\
+margin:0;padding:3rem 1rem"><h2 style="color:#dc2626;margin:0">${msg}</h2>
+<p style="margin:0.75rem 0 0">You can close this tab and return to the terminal.</p></body></html>`);
         server.close();
       };
       if (params.get("error")) {
@@ -219,7 +245,9 @@ export async function loginInteractive() {
         reject(new Error("OAuth callback missing code"));
         return;
       }
-      finish(200, "nopii — login successful ✓");
+      res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+      res.end(successPage());
+      server.close();
       resolve(c);
     });
     server.on("error", reject);
