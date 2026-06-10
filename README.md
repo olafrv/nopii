@@ -16,9 +16,24 @@ with stable placeholder tokens, forwards the sanitized request to Claude, and
 restores the original values in Claude's response so your experience is unchanged.
 
 > **WARNING:** `ANTHROPIC_BASE_URL` redirection is a **`claude` CLI or Agent SDK** feature — Claude Desktop and
-the VS Code extension do not honour that variable, so they can't be routed to `nopii` proxy.
+the VS Code extension do not honour that variable, so they can't be routed to the `nopii` proxy.
 
-## PII Values Redacted
+## Quick start
+
+```bash
+corepack enable && pnpm install --frozen-lockfile   # Node version in .nvmrc
+# download GLiNER weights (see model/README.md):
+#   model/gliner_medium-v2.1/onnx/model_fp16.onnx
+cp .env.example .env
+pnpm start   # proxy on http://localhost:8788
+
+# point Claude Code at it (in a separate shell):
+ANTHROPIC_BASE_URL=http://localhost:8788 ANTHROPIC_API_KEY=sk-ant-... claude
+```
+
+Read on for auth options (API key vs. subscription), redaction scope, and deployment.
+
+## What gets redacted
 
 - **Only the user prompt.** `nopii` rewrites `role: "user"` messages — plain text,
   `text` blocks, and `tool_result` content you feed back (on by default; disable
@@ -124,10 +139,12 @@ Override the requested scopes with `OAUTH_SCOPES` if you ever need the broader g
 
 ## Setup
 
+Requires Node (version pinned in `.nvmrc`) and pnpm (provided by corepack).
+
 ```bash
 corepack enable               # provides pnpm (version pinned in package.json)
 pnpm install --frozen-lockfile
-cp .env.example .env          # every option is documented inline — adjust if needed
+cp .env.example .env          # options documented inline; adjust as needed
 
 # Download the GLiNER ONNX weights into model/  (see model/README.md)
 #   -> model/gliner_medium-v2.1/onnx/model_fp16.onnx
@@ -139,7 +156,7 @@ pnpm dev                      # or: pnpm start
 > This project uses **pnpm** with supply-chain-security controls — see
 > [PNPM_SECURITY.md](./PNPM_SECURITY.md). Use pnpm, not npm.
 
-## Porxy Claude Code
+## Proxy Claude Code
 
 ```bash
 export ANTHROPIC_BASE_URL=http://localhost:8788
@@ -169,7 +186,8 @@ curl -s http://localhost:8788/healthz
 
 With `NODE_ENV=development DEBUG=true` set, the proxy logs how many PII spans it
 redacted per request (counts only — never the values). You can also exercise the
-Messages API directly through the proxy:
+Messages API directly through the proxy (this `x-api-key` example assumes the default
+`passthrough` mode; in `oauth` mode the proxy supplies its own token, so the header is ignored):
 
 ```bash
 curl -s http://localhost:8788/v1/messages \
@@ -179,7 +197,12 @@ curl -s http://localhost:8788/v1/messages \
   -d '{
     "model": "claude-opus-4-8",
     "max_tokens": 256,
-    "messages": [{"role":"user","content":"Email Sarah Chen at sarah.chen@acme.com about Tuesday."}]
+    "messages": [
+      {
+        "role": "user",
+        "content": "Email Sarah Chen at sarah.chen@acme.com about Tuesday."
+      }
+    ]
   }'
 ```
 
@@ -199,11 +222,11 @@ isolated from your host while persisting across `stop`/`start` — no re-onboard
 proxy/auth path, not editing host files.)
 
 ```bash
-./claude-nopii.sh start         # start the proxy, drop into claude (builds once if missing)
-                                # `start` is the default; extra args pass through to claude
-./claude-nopii.sh build         # rebuild the images after changing deps/Dockerfiles
-./claude-nopii.sh log           # print the proxy logs (add -f to follow)
-./claude-nopii.sh stop          # tear down the proxy and containers when done
+./claude-nopii.sh start   # start proxy, drop into claude (builds if missing)
+                          # `start` is default; extra args pass to claude
+./claude-nopii.sh build   # rebuild images after changing deps/Dockerfiles
+./claude-nopii.sh log     # print proxy logs (add -f to follow)
+./claude-nopii.sh stop    # tear down proxy and containers when done
 ```
 
 The **proxy** mounts your OAuth tokens from `~/.nopii` (read-write so token refresh

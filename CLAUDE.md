@@ -17,6 +17,11 @@ When you change the code, update the docs in the same task — don't leave them 
 
 Treat a PR that changes behavior without updating docs as incomplete.
 
+**Keep fenced code blocks ≤ 80 columns wide.** Lines *inside* ```` ``` ```` fences in
+any doc must not exceed 80 characters — wrap commands, trim inline `#` comments, or
+break JSON across lines. (Prose and tables are exempt; this is about copy-pasteable
+code that shouldn't wrap in a terminal.)
+
 ## Package management — MANDATORY
 
 `PNPM_SECURITY.md` is binding policy. **Read it before any dependency, `pnpm-lock.yaml`,
