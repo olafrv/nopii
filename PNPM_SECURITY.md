@@ -277,7 +277,7 @@ The Node runtime is pinned to an **exact** version (e.g. `24.16.0`) — never ma
 
 **Rule — to bump Node:** edit `.nvmrc` to the new exact version, run
 `pnpm run sync:node-pin` (rewrites `engines.node` from `.nvmrc` via
-`pnpm-node-pin-sync.sh`), then commit both files together. Because `engines.node` is
+`scripts/sync-node-pin.mjs`), then commit both files together. Because `engines.node` is
 generated, the two cannot drift as long as you sync after every `.nvmrc` change.
 
 ### `pnpm-lock.yaml` — lock file

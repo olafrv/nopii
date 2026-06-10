@@ -9,7 +9,7 @@
     "dev": "node --env-file=.env --watch src/server.js",
     "start": "node --env-file=.env src/server.js",
     "oauth-login": "node --env-file-if-exists=.env src/oauth-login.js",
-    "sync:node-pin": "sh ./pnpm-node-pin-sync.sh",
+    "sync:node-pin": "node scripts/sync-node-pin.mjs",
     "check:deny-rules": "node scripts/check-deny-rules.mjs",
     "test": "node --test test/leak-check.js"
   },
