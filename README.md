@@ -1,5 +1,8 @@
 # nopii — PII-redaction proxy for the Anthropic API in Claude Code (CLI)
 
+<p align="center">
+  <img src="src/img/nopii-logo-dark.png" alt="nopii logo" width="420">
+</p>
 
 ```
 Claude Code ──► nopii proxy (redacted) ──► api.anthropic.com
