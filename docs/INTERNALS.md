@@ -2,7 +2,7 @@
 
 How nopii works, for developers extending or debugging it. This is the mental model and
 the rationale behind each moving part. For the file/module map see
-[`src/FILES.md`](../src/FILES.md); for the hard rules you must not break see the
+[`docs/FILES.md`](./FILES.md); for the hard rules you must not break see the
 **Invariants** section of [`CLAUDE.md`](../CLAUDE.md); for user-facing setup see
 [`README.md`](../README.md).
 

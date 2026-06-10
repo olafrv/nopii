@@ -9,7 +9,7 @@ When you change the code, update the docs in the same task — don't leave them 
 - **`CLAUDE.md`** (this file) — architecture, commands, gotchas, and the Invariants
   section (token shape, redaction scope, fail mode, auth).
 - **`.env.example`** — a new/renamed/removed env var → update here **and** the config tables.
-- **`src/FILES.md`** — the single layout source: file layout, module roles, cwd/model-path
+- **`docs/FILES.md`** — the single layout source: file layout, module roles, cwd/model-path
   gotcha. A new/moved/repurposed file → update here.
 - **`docs/INTERNALS.md`** — the developer's how-it-works guide: request lifecycle, redaction
   scope, detection, tokenization, rehydration, auth modes, failure semantics. When you
