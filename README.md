@@ -18,21 +18,6 @@ restores the original values in Claude's response so your experience is unchange
 > **WARNING:** `ANTHROPIC_BASE_URL` redirection is a **`claude` CLI or Agent SDK** feature — Claude Desktop and
 the VS Code extension do not honour that variable, so they can't be routed to the `nopii` proxy.
 
-## Quick start
-
-```bash
-corepack enable && pnpm install --frozen-lockfile   # Node version in .nvmrc
-# download GLiNER weights (see model/README.md):
-#   model/gliner_medium-v2.1/onnx/model_fp16.onnx
-cp .env.example .env
-pnpm start   # proxy on http://localhost:8788
-
-# point Claude Code at it (in a separate shell):
-ANTHROPIC_BASE_URL=http://localhost:8788 ANTHROPIC_API_KEY=sk-ant-... claude
-```
-
-Read on for auth options (API key vs. subscription), redaction scope, and deployment.
-
 ## What gets redacted
 
 - **Only the user prompt.** `nopii` rewrites `role: "user"` messages — plain text,
@@ -48,48 +33,39 @@ Read on for auth options (API key vs. subscription), redaction scope, and deploy
 
 ## Authentication
 
-`nopii` supports two ways to authenticate, set with `AUTH_MODE`:
+`nopii` supports two ways to authenticate, set with `AUTH_MODE`. **OAuth (Option A) is
+the more PII-protective choice**: its token isn't granted the `file upload` scope, so there
+is simply no path for an unredacted file to leave your machine (see Option A's corollary).
+`passthrough` (Option B) is the zero-config **default** and the simplest to set up, but an
+API key reaches **any** endpoint — including the file endpoints nopii can't redact.
 
-| | `passthrough` (default) | `oauth` |
+| | `oauth` (Option A, recommended) | `passthrough` (Option B, default) |
 |---|---|---|
-| What you use | A pay-as-you-go **API key** | Your Claude Pro/Max **subscription** |
-| Billing | Per-token (separate from any subscription) | Flat monthly subscription |
-| How auth works | Claude Code's `x-api-key` is forwarded untouched | nopii holds its own OAuth token and injects it |
-| Setup | Create a key (below) | `pnpm run oauth-login` once (below) |
+| What you use | Your Claude Pro/Max **subscription** | A pay-as-you-go **API key** |
+| Billing | Flat monthly subscription | Per-token (separate from any subscription) |
+| How auth works | nopii holds its own OAuth token and injects it | Claude Code's `x-api-key` is forwarded untouched |
+| PII surface | No file-upload path (scope declined) | Key reaches any endpoint, incl. file upload |
+| Setup | `pnpm run oauth-login` once (below) | Create a key (below) |
 
+## Setup
 
-### Option A — API key (default)
-
-1. Sign in at **[console.anthropic.com](https://console.anthropic.com)**.
-2. **Settings → Billing** → add a payment method or buy prepaid credits (the API
-   is billed separately from any Pro/Max subscription).
-3. **Settings → API Keys → Create Key** and copy the `sk-ant-...` value.
+Requires Node (version pinned in `.nvmrc`) and pnpm (provided by corepack).
 
 ```bash
-# in the shell you run the proxy:
-pnpm start
+corepack enable               # provides pnpm (version pinned in package.json)
+pnpm install --frozen-lockfile
+cp .env.example .env          # options documented inline; adjust as needed
+
+# Download the GLiNER ONNX weights into model/  (see model/README.md)
+#   -> model/gliner_medium-v2.1/onnx/model_fp16.onnx
 ```
 
-**What stops the PII leak here — and what doesn't.** The API key only authenticates and
-bills the request; it is **not** what protects your data — nopii's redaction is (the same
-sanitized request goes upstream regardless of which key you use). What an API key can and
-can't do for you:
+> This project uses **pnpm** with supply-chain-security controls — see
+> [PNPM_SECURITY.md](./PNPM_SECURITY.md). Use pnpm, not npm.
 
-| Control | Protects your PII? | What it actually does |
-|---|---|---|
-| nopii redaction (`text` / `tool_result` blocks) | ✅ yes | Strips PII before the request leaves your machine — the actual protection |
-| Capability/endpoint scoping (e.g. "inference-only, no files") | ❌ unavailable | No such Anthropic key exists; unlike Option B's `file upload` scope, a key reaches **any** endpoint |
-| Workspace [spend / rate limits](https://platform.claude.com/docs/en/manage-claude/workspaces) | ❌ no | Caps cost & throughput — limits blast radius if the key leaks, not what data is sent |
-| Workspace read-only vs full access | ❌ no | Limits what a leaked key can do — blast radius, not data |
+Then pick an auth option below.
 
-> **Text-only limit — to avoid a leak.** Because no key can block file endpoints and nopii
-> redacts *text* only, inline `image`/`document` blocks and Files-API (`/v1/files`) uploads
-> pass through **unredacted** (see Option B's corollary). Keep PII out of pasted
-> screenshots/PDFs and any file-upload path. For hardening, point nopii at a dedicated
-> low-spend-cap workspace so a leaked key can't run up an unbounded bill or touch other
-> projects.
-
-### Option B — your Claude Pro/Max subscription (OAuth)
+### Option A — your Claude Pro/Max subscription (OAuth, recommended)
 
 Use your existing subscription instead of paying per token:
 
@@ -137,24 +113,36 @@ Override the requested scopes with `OAUTH_SCOPES` if you ever need the broader g
 > Files-API upload (`/v1/files`) is transparent passthrough too. File text that Claude
 > Code inlines into `tool_result`/`text` blocks *is* redacted.
 
-## Setup
+### Option B — API key (default mode)
 
-Requires Node (version pinned in `.nvmrc`) and pnpm (provided by corepack).
+1. Sign in at **[console.anthropic.com](https://console.anthropic.com)**.
+2. **Settings → Billing** → add a payment method or buy prepaid credits (the API
+   is billed separately from any Pro/Max subscription).
+3. **Settings → API Keys → Create Key** and copy the `sk-ant-...` value.
 
 ```bash
-corepack enable               # provides pnpm (version pinned in package.json)
-pnpm install --frozen-lockfile
-cp .env.example .env          # options documented inline; adjust as needed
-
-# Download the GLiNER ONNX weights into model/  (see model/README.md)
-#   -> model/gliner_medium-v2.1/onnx/model_fp16.onnx
-
-pnpm dev                      # or: pnpm start
-# [nopii] proxy listening on http://localhost:8788 -> https://api.anthropic.com
+# in the shell you run the proxy:
+pnpm start
 ```
 
-> This project uses **pnpm** with supply-chain-security controls — see
-> [PNPM_SECURITY.md](./PNPM_SECURITY.md). Use pnpm, not npm.
+**What stops the PII leak here — and what doesn't.** The API key only authenticates and
+bills the request; it is **not** what protects your data — nopii's redaction is (the same
+sanitized request goes upstream regardless of which key you use). What an API key can and
+can't do for you:
+
+| Control | Protects your PII? | What it actually does |
+|---|---|---|
+| nopii redaction (`text` / `tool_result` blocks) | ✅ yes | Strips PII before the request leaves your machine — the actual protection |
+| Capability/endpoint scoping (e.g. "inference-only, no files") | ❌ unavailable | No such Anthropic key exists; unlike Option A's `file upload` scope, a key reaches **any** endpoint |
+| Workspace [spend / rate limits](https://platform.claude.com/docs/en/manage-claude/workspaces) | ❌ no | Caps cost & throughput — limits blast radius if the key leaks, not what data is sent |
+| Workspace read-only vs full access | ❌ no | Limits what a leaked key can do — blast radius, not data |
+
+> **Text-only limit — to avoid a leak.** Because no key can block file endpoints and nopii
+> redacts *text* only, inline `image`/`document` blocks and Files-API (`/v1/files`) uploads
+> pass through **unredacted** (see Option A's corollary). Keep PII out of pasted
+> screenshots/PDFs and any file-upload path. For hardening, point nopii at a dedicated
+> low-spend-cap workspace so a leaked key can't run up an unbounded bill or touch other
+> projects.
 
 ## Proxy Claude Code
 
@@ -234,7 +222,16 @@ persists), plus `./model` and live `./src`; **claude** mounts only `./data/.clau
 `./data/.claude.json` for its own state. To watch redaction happen, set `NODE_ENV=development` and `DEBUG=true` in `.env`
 (the proxy logs span **counts** only, never values) and run `./claude-nopii.sh log`.
 
-## Tests
+## Development
+
+Run the proxy with auto-reload (loads `.env`):
+
+```bash
+pnpm dev                      # or: pnpm start
+# [nopii] proxy listening on http://localhost:8788 -> https://api.anthropic.com
+```
+
+Tests:
 
 ```bash
 pnpm test                                  # GLiNER leak-check (needs the model)
