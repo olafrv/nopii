@@ -12,6 +12,7 @@
     "model:download": "node --env-file-if-exists=.env scripts/download-model.mjs",
     "sync:node-pin": "node scripts/sync-node-pin.mjs",
     "check:deny-rules": "node scripts/check-deny-rules.mjs",
+    "leak-stats": "node --env-file-if-exists=.env test/leak-stats.mjs",
     "test": "node --test test/leak-check.js"
   },
   "engines": {

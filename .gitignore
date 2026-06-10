@@ -20,3 +20,6 @@ OLAF.md
 # Model artifacts (not committed — see model/README.md)
 model/**/*.onnx
 model/.cache/
+
+# PII benchmark dataset (large, not committed — see README "Development")
+test/*openpii*.json

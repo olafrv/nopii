@@ -73,6 +73,7 @@ pnpm dev                             # start with --watch + .env
 pnpm start                           # start (prod)
 pnpm test                            # GLiNER leak-check — REQUIRES model weights
 node --test test/rehydrate.test.js   # rehydration logic — no model needed
+pnpm run leak-stats                  # recall/precision over ai4privacy dataset
 pnpm run check:deny-rules            # guard: PNPM_SECURITY.md deny entries present (CI)
 pnpm run oauth-login                 # one-time OAuth login (AUTH_MODE=oauth); writes ~/.nopii
                                      # NB: `pnpm login` is pnpm's npm-registry builtin — must use `run`
@@ -161,7 +162,9 @@ at the root because Docker only reads it from the context root.
   pronouns/common words ("I", "you", "hello", "user") as PERSON. `src/ner.js` also keeps a
   `STOPWORDS` denylist that drops those regardless of score (zero recall cost on real
   names) — extend it if new false positives show up. After changing either, re-run
-  `pnpm test` (the GLiNER leak-check) since both affect recall.
+  `pnpm test` (the GLiNER leak-check) since both affect recall; `pnpm run leak-stats`
+  gives broader recall/precision numbers over the ai4privacy dataset (the label→type map
+  is at the top of `test/leak-stats.mjs`).
 - **API-key auth** (`passthrough`) is the validated default. **OAuth** (`AUTH_MODE=oauth`)
   uses the well-known public Claude Code OAuth values in `src/oauth.js`: client_id
   `9d1c250a-e61b-44d9-88ed-5944d1962f5e`, authorize `claude.ai/oauth/authorize`, token

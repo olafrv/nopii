@@ -247,6 +247,29 @@ from real prompts as you find gaps. `test/rehydrate.test.js` covers the tricky
 streaming path, including tokens split across SSE deltas and JSON-escaped tool
 inputs.
 
+### Leak statistics over a real PII dataset
+
+For broader recall/precision numbers than the handful of fixtures, run the detector
+against the public [ai4privacy](https://huggingface.co/datasets/ai4privacy/pii-masking-300k)
+dataset. It's a benchmark, not a CI gate (the gate stays `leak-check.js`).
+
+Download an English split (e.g. `data/train/*english*.json`) to
+`test/1english_openpii_30k.json` (gitignored — it's ~100 MB), then:
+
+```bash
+pnpm run leak-stats                  # 1000 records, stride-sampled (~2 min)
+pnpm run leak-stats -- --limit 5000  # bigger sample
+pnpm run leak-stats -- --limit 0     # the full dataset (slow)
+pnpm run leak-stats -- --file path/to/other-split.json
+pnpm run leak-stats -- --json        # machine-readable
+```
+
+It reports the **leak rate** (gold PII spans with no overlapping detection — the
+privacy headline) in two scopes (labels nopii targets, vs every gold span),
+per-label coverage, strict per-type precision/recall/F1, and over-redaction. The
+dataset-label→nopii-type map lives at the top of `test/leak-stats.mjs`; adjust it if
+you change the entity set in `src/ner.js`.
+
 ## Deploy as a shared server
 
 ```bash
