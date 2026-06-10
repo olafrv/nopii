@@ -28,13 +28,22 @@ code that shouldn't wrap in a terminal.)
 or `pnpm-workspace.yaml` change, then obey every rule.** A change that violates it must
 not be committed.
 
+This block is the agent-facing summary; `AGENTS.md` holds the canonical copy for
+all tools. Keep the two in sync.
+
 - **Core rules:** pnpm only (never `npm`/`yarn`), no `package-lock.json`, never
   `dangerouslyAllowAllBuilds`.
-- **`PNPM_SECURITY.md` is read-only for you** — denied in `.claude/settings.json`. Don't
-  edit it; propose the diff and let a human apply it.
+- **`PNPM_SECURITY.md` is human-owned — do not edit it.** It's denied via
+  `Edit`/`Write` in `.claude/settings.json`. Propose the diff and let a human apply it.
 - **Protect the deny rule.** When `.claude/settings.json` changes, confirm its `deny`
   list still has `Edit(PNPM_SECURITY.md)` and `Write(PNPM_SECURITY.md)`; if not, flag it
-  and propose restoring it.
+  and propose restoring it. (Other tools may lack an enforceable deny — the human-owned
+  rule above still binds.)
+- **Self-propagation — keep this policy alive across agents.** Ensure this block (or a
+  pointer to it) exists in every agent-instruction file present in the repo: `AGENTS.md`,
+  `CLAUDE.md`, `.github/copilot-instructions.md`, `.cursor/rules/`, `.windsurf/rules/`,
+  `GEMINI.md`, `CONVENTIONS.md`. If one is missing it, propose adding it. If `AGENTS.md`
+  doesn't exist yet, propose creating it as the canonical copy.
 
 ## What this is
 

@@ -7,26 +7,103 @@
 > **propose** the diff in your response and let a human apply it (and lift the deny
 > rule deliberately). Never weaken a control to make an install pass.
 
-## For humans: add this to CLAUDE.md
+## For humans: make this policy effective
 
-So Claude reads and obeys this policy, a human should keep the following block in
-`CLAUDE.md` (it's the source of truth for the wording — copy it verbatim):
+This file is just text. It does nothing on its own — it becomes effective only
+when a human does two one-time setup steps: make your agent **read** it, and make
+it unable to **edit** it. Do both, in the same commit.
+
+### 1. Bootstrap — make your agent read the policy
+
+Agents read a per-tool instruction file, not arbitrary repo files. So a human
+must **seed the pointer once**. (This is the one step no agent can do for itself:
+it can't be told to read a file it has no pointer to.) After the seed, the block
+below keeps every *other* instruction file in sync automatically (see
+"Self-propagation").
+
+**One-time bootstrap** — paste the block below into whichever file(s) your
+team's agents read. Prefer `AGENTS.md` as the canonical copy; in tool-specific
+files you may paste the block or just point at it ("Package management: obey
+`PNPM_SECURITY.md` and the policy block in `AGENTS.md`").
+
+| Agent              | Instruction file                   |
+|--------------------|------------------------------------|
+| Any (cross-tool)   | `AGENTS.md`                        |
+| Claude Code        | `CLAUDE.md`                        |
+| GitHub Copilot     | `.github/copilot-instructions.md`  |
+| Cursor             | `.cursor/rules/pnpm-security.mdc`  |
+| Windsurf           | `.windsurf/rules/pnpm-security.md` |
+| Gemini CLI         | `GEMINI.md`                        |
+| Aider              | `CONVENTIONS.md`                   |
 
 ```markdown
 ## Package management — MANDATORY
 
-`PNPM_SECURITY.md` is binding policy. **Read it before any dependency, `pnpm-lock.yaml`,
-or `pnpm-workspace.yaml` change, then obey every rule.** A change that violates it must
-not be committed.
+`PNPM_SECURITY.md` is binding policy. **Read it before any dependency,
+`pnpm-lock.yaml`, or `pnpm-workspace.yaml` change, then obey every rule.** A
+change that violates it must not be committed.
 
-- **Core rules:** pnpm only (never `npm`/`yarn`), no `package-lock.json`, never
-  `dangerouslyAllowAllBuilds`.
-- **`PNPM_SECURITY.md` is read-only for you** — denied in `.claude/settings.json`. Don't
-  edit it; propose the diff and let a human apply it.
-- **Protect the deny rule.** When `.claude/settings.json` changes, confirm its `deny`
-  list still has `Edit(PNPM_SECURITY.md)` and `Write(PNPM_SECURITY.md)`; if not, flag it
-  and propose restoring it.
+- **Core rules:** pnpm only (never `npm`/`yarn`), no `package-lock.json`,
+  never `dangerouslyAllowAllBuilds`.
+- **`PNPM_SECURITY.md` is human-owned — do not edit it.** Propose the diff and
+  let a human apply it. If your tool has a file-level deny/permission rule
+  (e.g. Claude Code's `.claude/settings.json` deny list), it must block
+  `Edit`/`Write` on `PNPM_SECURITY.md`; when that config changes, confirm the
+  deny is intact and propose restoring it if not.
+- **Self-propagation — keep this block alive across agents.** When you work in
+  this repo, ensure this block (or a pointer to it) exists in every agent
+  instruction file present: `AGENTS.md`, `CLAUDE.md`,
+  `.github/copilot-instructions.md`, `.cursor/rules/`, `.windsurf/rules/`,
+  `GEMINI.md`, `CONVENTIONS.md`. If one is missing it, propose adding it. If
+  you are an agent whose instruction file isn't in the table in
+  `PNPM_SECURITY.md`, propose adding your file there too.
 ```
+
+### 2. Enforce — make the policy read-only
+
+The header above says this file is "hard-blocked by a deny rule" — but that
+block is a **separate file that does not travel with this one**. Copying
+`PNPM_SECURITY.md` into another repo gives you the policy text and none of the
+enforcement, while the header still claims it's protected. Bootstrap (step 1)
+makes agents *read* the policy; the deny rule makes them unable to *edit* it.
+
+**Claude Code** — create or extend `.claude/settings.json` (commit it; do **not**
+gitignore it, so the protection travels with the repo and any removal shows up in
+review):
+
+```json
+{
+  "permissions": {
+    "deny": [
+      "Edit(PNPM_SECURITY.md)",
+      "Write(PNPM_SECURITY.md)"
+    ]
+  }
+}
+```
+
+**Optional — self-deny the settings file too.** So an agent can't remove the rule
+with its own edit tools, also deny edits to `.claude/settings.json` itself:
+
+```json
+"deny": [
+  "Edit(PNPM_SECURITY.md)",
+  "Write(PNPM_SECURITY.md)",
+  "Edit(.claude/settings.json)",
+  "Write(.claude/settings.json)"
+]
+```
+
+**Other tools** — deny/permission mechanisms vary, and some agents have none.
+Where there is no enforceable deny, the human-owned rule in the header is the
+*only* thing standing in the way — so back it with the CI check below.
+
+**Backstop (works for any tool).** A deny rule stops the easy path, but an agent
+with shell access can still rewrite files out-of-band (`sed`, `echo >`). The only
+check that does not depend on the agent's cooperation is a CI/test guard that
+fails the build if the deny entries are missing — it catches removal by any path
+and forces a human to see it. Add it as a CI check (see Enforced Security
+Measures → CI/CD Checks).
 
 ## Best Practices
 
