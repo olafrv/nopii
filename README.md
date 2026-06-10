@@ -216,10 +216,36 @@ proxy/auth path, not editing host files.)
 ```bash
 ./claude-nopii.sh start   # start proxy, drop into claude (builds if missing)
                           # `start` is default; extra args pass to claude
+./claude-nopii.sh shell   # bash prompt in the claude container (no TUI)
 ./claude-nopii.sh build   # rebuild images after changing deps/Dockerfiles
 ./claude-nopii.sh log     # print proxy logs (add -f to follow)
 ./claude-nopii.sh stop    # tear down proxy and containers when done
 ```
+
+**Anything after `start` is passed straight to `claude`** — so you can run any
+`claude` subcommand in the container instead of opening the interactive TUI. This
+is how you configure the container's own (isolated) claude without needing a shell:
+
+```bash
+# list / add / remove MCP servers for the containerised claude
+./claude-nopii.sh start mcp list
+./claude-nopii.sh start mcp add <name> -s user -- npx -y <server-pkg>
+./claude-nopii.sh start mcp remove <name>
+
+# any other claude subcommand works too
+./claude-nopii.sh start --version
+./claude-nopii.sh start config ls
+```
+
+MCP servers added this way persist in `data/.claude.json` and run **inside the
+claude container**, so the command must be runnable there (an `npx` stdio server,
+or an HTTP/SSE URL the container can reach — `proxy:8788` in-network,
+`host.docker.internal` for host services). Drop the args to get the TUI back.
+
+For interactive admin work, `./claude-nopii.sh shell` drops you into a bash prompt
+in the claude container (same isolated mounts) instead of the TUI — handy for a
+series of `claude mcp …`/`claude config …` commands or poking around. Pass a command
+to run-and-exit: `./claude-nopii.sh shell -c 'claude mcp list'`.
 
 The **proxy** mounts your OAuth tokens from `~/.nopii` (read-write so token refresh
 persists), plus `./model` and live `./src`; **claude** mounts only `./data/.claude` and

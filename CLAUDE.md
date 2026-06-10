@@ -89,7 +89,15 @@ drops you into claude — **no `--build`**, so compose builds only if the image 
 repeat starts are instant; run `./claude-nopii.sh build` (= `… build`) after changing
 deps/Dockerfiles. `./claude-nopii.sh log` (= `… logs proxy`; add `-f` to follow) prints the
 proxy logs; `./claude-nopii.sh stop` (= `… down`) tears it down. `start` is the default
-subcommand; args after it pass through to claude. Auth follows `AUTH_MODE` in `.env` via
+subcommand; **args after it pass straight to `claude`** (the entrypoint ends `exec claude
+"$@"`), so any claude subcommand runs in-container without a shell — e.g.
+`./claude-nopii.sh start mcp list` or `… start mcp add <name> -s user -- npx -y <pkg>` to
+configure the container's *own* (isolated, empty by default) MCP servers; they persist in
+`data/.claude.json` and run inside the claude container. `./claude-nopii.sh shell`
+(= `… run --rm --entrypoint bash claude`) gives a bash prompt in the claude container for
+interactive admin work instead of pass-through (`shell -c '<cmd>'` runs one command);
+overriding the entrypoint skips its proxy-wait/auth setup, but compose still starts the
+proxy first via `depends_on`. Auth follows `AUTH_MODE` in `.env` via
 `docker/claude-entrypoint.sh`. The claude service does **not** load `.env` (that would leak
 proxy-only vars like `DEBUG`/`NODE_ENV` into the CLI and force it verbose) — it gets an
 explicit env allowlist, and `claude-nopii.sh` exports `AUTH_MODE` from `.env` for compose
