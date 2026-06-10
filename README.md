@@ -52,24 +52,24 @@ the VS Code extension do not honour that variable, so they can't be routed to `n
 pnpm start
 ```
 
-> **What stops the PII leak here — and what doesn't.** The API key only authenticates
-> and bills the request; it is **not** what protects your data. nopii's redaction is —
-> the same sanitized request goes upstream regardless of which key you use. Unlike
-> Option B (where declining the `file upload` scope makes uploads impossible), an
-> Anthropic API key **cannot be scoped by capability or endpoint**: there is no
-> "inference-only, no files" key. A full-access key can reach any endpoint, so the
-> text-only redaction limit still applies — inline `image`/`document` blocks and
-> Files-API (`/v1/files`) uploads pass through unredacted (see Option B's corollary).
->
-> **To avoid a leak:** keep PII out of pasted screenshots/PDFs and out of any
-> file-upload path, since nopii can only redact *text* in `text`/`tool_result` blocks.
->
-> **Optional hardening (blast radius, not PII).** Anthropic keys *can* be scoped to a
-> [**workspace**](https://platform.claude.com/docs/en/manage-claude/workspaces) with its
-> own **spend** and **rate** limits, and set **read-only** vs **full access**. Create a
-> dedicated workspace with a low spend cap for nopii so a leaked or misused key can't run
-> up an unbounded bill or touch other projects. This limits financial/operational blast
-> radius — it does **not** change what data is sent (that's redaction's job).
+**What stops the PII leak here — and what doesn't.** The API key only authenticates and
+bills the request; it is **not** what protects your data — nopii's redaction is (the same
+sanitized request goes upstream regardless of which key you use). What an API key can and
+can't do for you:
+
+| Control | Protects your PII? | What it actually does |
+|---|---|---|
+| nopii redaction (`text` / `tool_result` blocks) | ✅ yes | Strips PII before the request leaves your machine — the actual protection |
+| Capability/endpoint scoping (e.g. "inference-only, no files") | ❌ unavailable | No such Anthropic key exists; unlike Option B's `file upload` scope, a key reaches **any** endpoint |
+| Workspace [spend / rate limits](https://platform.claude.com/docs/en/manage-claude/workspaces) | ❌ no | Caps cost & throughput — limits blast radius if the key leaks, not what data is sent |
+| Workspace read-only vs full access | ❌ no | Limits what a leaked key can do — blast radius, not data |
+
+> **Text-only limit — to avoid a leak.** Because no key can block file endpoints and nopii
+> redacts *text* only, inline `image`/`document` blocks and Files-API (`/v1/files`) uploads
+> pass through **unredacted** (see Option B's corollary). Keep PII out of pasted
+> screenshots/PDFs and any file-upload path. For hardening, point nopii at a dedicated
+> low-spend-cap workspace so a leaked key can't run up an unbounded bill or touch other
+> projects.
 
 ### Option B — your Claude Pro/Max subscription (OAuth)
 
