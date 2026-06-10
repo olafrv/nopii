@@ -273,7 +273,7 @@ per-label coverage, strict per-type precision/recall/F1, and over-redaction. The
 dataset-label→nopii-type map lives at the top of `test/leak-stats.mjs`; adjust it if
 you change the entity set in `src/ner.js`.
 
-See [test/LEAK_TEST.md](./test/LEAK_TEST.md) for a sample run, how to read every
+See [docs/LEAK_TEST.md](./docs/LEAK_TEST.md) for a sample run, how to read every
 section, and concrete ways to improve the detection rate.
 
 ## Deploy as a shared server
