@@ -8,6 +8,9 @@ node_modules/
 # Local tooling state
 .remember/
 
+# Olaf's private wish list (per its own instructions — never tracked)
+OLAF.md
+
 # Persisted Claude Code container state (data/.claude{,.json} are bind-mounted into the
 # claude container; keep the dir, ignore the persisted state)
 /data/.claude/*

@@ -134,7 +134,18 @@ at the root because Docker only reads it from the context root.
 - The `objc[...] Class CoreMLExecution is implemented in both...` startup line is a
   harmless onnxruntime dylib-duplication warning. Ignore.
 - With the **fp16** weights, onnxruntime logs `Could not find a CPU kernel ... constant
-  fold ReduceMean` at load — harmless (an optimization it skips for fp16 LayerNorm). Ignore.
+  fold ReduceMean` at load (3×, node `.../encoder/LayerNorm/ReduceMean`) — harmless: there's
+  no fp16 CPU kernel for `ReduceMean`, so the constant-folding pass can't pre-compute that one
+  node and leaves it to run normally at inference. **Not fixable without suppressing or
+  sacrificing folding** (investigated 2026-06-11): the warning is emitted by native ORT to fd
+  2 (not `process.stderr`); `gliner@0.0.19`'s node wrapper calls
+  `InferenceSession.create(modelPath)` with **no options arg**, so we can't pass a
+  `graphOptimizationLevel`, `logSeverityLevel`, or `optimizedModelFilePath`; folding lives in
+  the *basic* opt tier so `basic`/`extended`/`all` all warn, and the only level that skips it
+  (`disabled`) **fails to load** the model (unresolved fp16/fp32 precision cast);
+  `optimizedModelFilePath` writes nothing in onnxruntime-node 1.19.2 (and an fp16 reload would
+  re-warn anyway). The only true fixes are log-severity suppression or fp32 graph surgery on a
+  forked weight file — both out of scope. Ignore the line.
 - **Tokenizer fetch & cache.** gliner sets `allowLocalModels=false` and always pulls the
   tokenizer from HF (`AutoTokenizer.from_pretrained`), caching via transformers.js. We
   import `@xenova/transformers` directly (now a **direct** dep) only to set `env.cacheDir`
