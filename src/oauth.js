@@ -163,28 +163,26 @@ export function hasCredentials() {
 // Interactive browser login (PKCE authorization-code flow)
 // ---------------------------------------------------------------------------
 
-// Logo shown on the browser success page, inlined as a data URI so it renders
-// after the callback server has already closed (no second request to serve).
-function logoDataUri() {
+// The nopii logo as an <img>, inlined as a data URI so it renders after the
+// callback server has already closed (no second request to serve). Returns ""
+// if the file can't be read — the logo is decorative.
+function logoImg() {
   try {
     const file = fileURLToPath(new URL("./img/nopii-logo-auth.png", import.meta.url));
-    return `data:image/png;base64,${fs.readFileSync(file).toString("base64")}`;
+    const uri = `data:image/png;base64,${fs.readFileSync(file).toString("base64")}`;
+    return `<img src="${uri}" alt="nopii" style="max-width:320px;width:60%;height:auto;margin-top:1.5rem">`;
   } catch {
-    return null; // logo is decorative; fall back to text-only success page
+    return "";
   }
 }
 
-// Centered success page: green headline + the nopii logo.
-function successPage() {
-  const logo = logoDataUri();
-  const img = logo
-    ? `<img src="${logo}" alt="nopii" style="max-width:320px;width:60%;height:auto;margin-top:1.5rem">`
-    : "";
+// Centered callback page: a colored headline, the close-tab note, and the logo.
+// Used for both success (green) and failure (red).
+function resultPage(msg, color) {
   return `<!doctype html><html><body style="font-family:sans-serif;text-align:center;\
-margin:0;padding:3rem 1rem"><h2 style="color:#16a34a;margin:0">\
-nopii — login successful ✓</h2>\
+margin:0;padding:3rem 1rem"><h2 style="color:${color};margin:0">${msg}</h2>\
 <p style="margin:0.75rem 0 0">You can close this tab and return to the terminal.</p>\
-${img}</body></html>`;
+${logoImg()}</body></html>`;
 }
 
 function openBrowser(url) {
@@ -224,9 +222,7 @@ export async function loginInteractive() {
       const params = u.searchParams;
       const finish = (status, msg) => {
         res.writeHead(status, { "content-type": "text/html; charset=utf-8" });
-        res.end(`<html><body style="font-family:sans-serif;text-align:center;\
-margin:0;padding:3rem 1rem"><h2 style="color:#dc2626;margin:0">${msg}</h2>
-<p style="margin:0.75rem 0 0">You can close this tab and return to the terminal.</p></body></html>`);
+        res.end(resultPage(msg, "#dc2626"));
         server.close();
       };
       if (params.get("error")) {
@@ -246,7 +242,7 @@ margin:0;padding:3rem 1rem"><h2 style="color:#dc2626;margin:0">${msg}</h2>
         return;
       }
       res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
-      res.end(successPage());
+      res.end(resultPage("nopii — login successful ✓", "#16a34a"));
       server.close();
       resolve(c);
     });
