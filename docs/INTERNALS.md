@@ -85,8 +85,10 @@ every `grep`/`cat`/command output, every test log returns to the API as a `tool_
 [`src/ner.js`](../src/ner.js) `detectEntities(text)` returns non-overlapping
 `{ type, start, end }` spans from two sources, then merges them:
 
-- **GLiNER** (ONNX model) for contextual entities (`person`, `address`, `city`, …). It's
-  warmed at startup so the first real request isn't penalized. Two quality controls:
+- **GLiNER** (ONNX model) for contextual entities (`person`, `address`, `national_id`, … —
+  the default set is in `src/ner.js`; noisy geo terms like `city`/`zipcode` and `user_id` are
+  available but off by default). It's warmed at startup so the first real request isn't
+  penalized. Two quality controls:
   - `GLINER_THRESHOLD` (default **0.5**). Below ~0.4 it starts tagging pronouns and
     filler ("I", "you", "hello", "user") as PERSON. Lower = more aggressive/more false
     positives; higher = more misses.

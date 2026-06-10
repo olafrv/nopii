@@ -47,7 +47,7 @@ const ENTITY_TYPES = (process.env.GLINER_ENTITIES
       // "country",
       // "zipcode",
       "ip_address",
-      // "national_id",
+      "national_id",
       // "user_id",
       "credit_card",
       "account",
