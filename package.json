@@ -10,6 +10,7 @@
     "start": "node --env-file=.env src/server.js",
     "oauth-login": "node --env-file-if-exists=.env src/oauth-login.js",
     "model:download": "node --env-file-if-exists=.env scripts/download-model.mjs",
+    "dataset:download": "node --env-file-if-exists=.env scripts/download-dataset.mjs",
     "sync:node-pin": "node scripts/sync-node-pin.mjs",
     "check:deny-rules": "node scripts/check-deny-rules.mjs",
     "leak-stats": "node --env-file-if-exists=.env test/leak-stats.mjs",

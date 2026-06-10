@@ -73,6 +73,7 @@ pnpm dev                             # start with --watch + .env
 pnpm start                           # start (prod)
 pnpm test                            # GLiNER leak-check — REQUIRES model weights
 node --test test/rehydrate.test.js   # rehydration logic — no model needed
+pnpm run dataset:download            # fetch ai4privacy PII split into datasets/
 pnpm run leak-stats                  # recall/precision over ai4privacy dataset
 pnpm run check:deny-rules            # guard: PNPM_SECURITY.md deny entries present (CI)
 pnpm run oauth-login                 # one-time OAuth login (AUTH_MODE=oauth); writes ~/.nopii

@@ -14,8 +14,17 @@ how to improve the numbers.
 
 The benchmark scores against the public
 [ai4privacy/pii-masking-300k](https://huggingface.co/datasets/ai4privacy/pii-masking-300k)
-dataset. Download an English split (e.g. `data/train/*english*.json`) to
-`test/1english_openpii_30k.json` — it is **gitignored** (~100 MB) and never committed.
+dataset. Fetch it with the helper script — it downloads to `datasets/`, mirroring the
+Hugging Face repo path (`datasets/ai4privacy/pii-masking-300k/data/train/…`), and is
+**gitignored** (~100 MB, never committed):
+
+```bash
+pnpm run dataset:download            # data/train/1english_openpii_30k.jsonl
+pnpm run dataset:download -- --file german_openpii_30k.jsonl   # other language
+pnpm run dataset:download -- --split validation                # other split
+pnpm run dataset:download -- --help
+```
+
 Each record gives a `source_text` and a gold `privacy_mask` (the true PII spans, as
 `{value, start, end, label}`); the benchmark feeds `source_text` to the detector and
 scores the result against that mask.
@@ -27,10 +36,13 @@ pnpm run leak-stats                  # 1000 records, stride-sampled (~2 min)
 pnpm run leak-stats -- --limit 5000  # bigger sample, tighter numbers
 pnpm run leak-stats -- --limit 0     # the full dataset (~25 min)
 pnpm run leak-stats -- --random --seed 42   # random sample instead of stride
-pnpm run leak-stats -- --file path/to/other-split.json
+pnpm run leak-stats -- --file path/to/other-split.jsonl
 pnpm run leak-stats -- --json        # machine-readable output
 pnpm run leak-stats -- --help        # all flags
 ```
+
+It defaults to the file `dataset:download` fetches, so a plain `pnpm run leak-stats`
+works right after the download.
 
 By default it takes **1000 records by deterministic stride** (every Nth record across
 the whole file), so the sample is evenly spread and **reproducible** — re-running gives
@@ -40,10 +52,10 @@ the same numbers, so a change in the score reflects a code change, not sampling 
 
 A run of `pnpm run leak-stats -- --limit 1000 --examples 8` (the harmless
 `objc[…]` / `constant fold ReduceMean` startup lines elided — see the CLAUDE.md
-gotcha):
+gotcha; the dataset path on the first line is shortened here to fit):
 
 ```
-nopii leak-stats — test/1english_openpii_30k.json
+nopii leak-stats — …/data/train/1english_openpii_30k.jsonl
 sample: 1000 records (deterministic stride); detect 106.7s (106.7 ms/rec)
 
 === Leak rate — type-agnostic coverage (did nopii redact the span at all?) ===

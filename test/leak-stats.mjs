@@ -17,9 +17,10 @@
 //   pnpm run leak-stats -- --random --seed 42
 //   pnpm run leak-stats -- --json       # machine-readable
 //
-// Dataset (not committed — see README "Development"): download
-//   data/train/*english*.json from https://huggingface.co/datasets/ai4privacy/
-//   pii-masking-300k to test/1english_openpii_30k.json (override with --file).
+// Dataset (not committed — see README "Development"): fetch it with
+//   pnpm run dataset:download
+// which stores it under datasets/ai4privacy/pii-masking-300k/data/train/ (the
+// default --file below). Override the path with --file.
 import { createReadStream } from "node:fs";
 import { createInterface } from "node:readline";
 import { detectEntities } from "../src/ner.js";
@@ -42,7 +43,9 @@ const LABEL_MAP = {
 };
 
 function parseArgs(argv) {
-  const o = { file: "test/1english_openpii_30k.json", limit: 1000, offset: 0,
+  const o = {
+    file: "datasets/ai4privacy/pii-masking-300k/data/train/1english_openpii_30k.jsonl",
+    limit: 1000, offset: 0,
     every: 0, random: false, seed: 1, json: false, examples: 10 };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
@@ -62,7 +65,7 @@ function parseArgs(argv) {
 }
 
 const HELP = `Usage: pnpm run leak-stats [-- <opts>]
-  --file <path>    dataset JSONL (default test/1english_openpii_30k.json)
+  --file <path>    dataset JSONL (default: the file pnpm run dataset:download fetches)
   --limit N        sample size; 0 = full dataset (default 1000)
   --offset N       skip the first N records (default 0)
   --every N        take every Nth record (explicit stride; overrides sampling)

@@ -253,16 +253,19 @@ For broader recall/precision numbers than the handful of fixtures, run the detec
 against the public [ai4privacy](https://huggingface.co/datasets/ai4privacy/pii-masking-300k)
 dataset. It's a benchmark, not a CI gate (the gate stays `leak-check.js`).
 
-Download an English split (e.g. `data/train/*english*.json`) to
-`test/1english_openpii_30k.json` (gitignored — it's ~100 MB), then:
+Fetch the dataset (~100 MB, gitignored under `datasets/`, mirroring the Hugging
+Face repo path), then run the benchmark:
 
 ```bash
+pnpm run dataset:download            # data/train/1english_openpii_30k.jsonl
 pnpm run leak-stats                  # 1000 records, stride-sampled (~2 min)
 pnpm run leak-stats -- --limit 5000  # bigger sample
 pnpm run leak-stats -- --limit 0     # the full dataset (slow)
-pnpm run leak-stats -- --file path/to/other-split.json
 pnpm run leak-stats -- --json        # machine-readable
 ```
+
+Other splits/languages: `pnpm run dataset:download -- --file german_openpii_30k.jsonl`,
+then `pnpm run leak-stats -- --file datasets/.../data/train/german_openpii_30k.jsonl`.
 
 It reports the **leak rate** (gold PII spans with no overlapping detection — the
 privacy headline) in two scopes (labels nopii targets, vs every gold span),

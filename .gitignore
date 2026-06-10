@@ -21,5 +21,6 @@ OLAF.md
 model/**/*.onnx
 model/.cache/
 
-# PII benchmark dataset (large, not committed — see README "Development")
-test/*openpii*.json
+# PII benchmark datasets (large, not committed — see README "Development";
+# fetch with `pnpm run dataset:download`)
+/datasets/
