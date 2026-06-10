@@ -177,7 +177,7 @@ async function main() {
       }
       if (anyOverlap) { byLabel[g.label].covered++; goldAllCovered++; if (g.type) goldMappedCovered++; }
       else if (examples.length < opt.examples) {
-        const ctx = text.slice(Math.max(0, g.start - 25), g.end + 25).replace(/\s+/g, " ");
+        const ctx = text.slice(Math.max(0, g.start - 15), g.end + 15).replace(/\s+/g, " ");
         examples.push({ label: g.label, value: g.value, ctx });
       }
       if (g.type && typeMatch) byType[g.type].tp++;
@@ -215,8 +215,8 @@ async function main() {
     : opt.every > 0 ? `every ${opt.every}th`
     : "deterministic stride";
   console.log(`\nnopii leak-stats — ${opt.file}`);
-  console.log(`sample: ${records} records (${sampling}); detect time ${(ms / 1000).toFixed(1)}s` +
-    ` (${(ms / Math.max(1, records)).toFixed(1)} ms/record)\n`);
+  console.log(`sample: ${records} records (${sampling}); detect ${(ms / 1000).toFixed(1)}s` +
+    ` (${(ms / Math.max(1, records)).toFixed(1)} ms/rec)\n`);
 
   console.log("=== Leak rate — type-agnostic coverage (did nopii redact the span at all?) ===");
   console.log(`  MAPPED   (labels nopii targets): leaked ${leakMapped}/${goldMappedTotal}` +
@@ -253,12 +253,14 @@ async function main() {
 
   console.log("\n=== Over-redaction (detections vs ALL gold PII, any label) ===");
   console.log(`  detections ${detTotal}; overlap real PII ${detHit} (${pct(detHit, detTotal).trim()});` +
-    ` spurious ${detTotal - detHit} (flagged non-PII)`);
+    ` spurious ${detTotal - detHit} (non-PII)`);
 
   if (examples.length) {
-    console.log(`\n=== Example leaks (gold spans nopii missed entirely) — public synthetic data ===`);
+    console.log(`\n=== Example leaks (missed gold spans) — public synthetic data ===`);
     for (const e of examples) {
-      console.log(`  [${e.label}] "${e.value}"  …${e.ctx}…`);
+      let line = `  [${e.label}] "${e.value}"  …${e.ctx}…`;
+      if (line.length > 78) line = line.slice(0, 77) + "…";
+      console.log(line);
     }
   }
   console.log();
