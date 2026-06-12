@@ -1,0 +1,27 @@
+# gitleaks configuration for nopii.
+#
+# Keep all of gitleaks' built-in rules active (useDefault = true), and only add
+# a narrow allowlist for known false positives. Run a full-history scan with:
+#
+#   gitleaks detect --source . --log-opts="--all" --redact -v
+#
+# Adding a new allowlist entry is a security decision: only allowlist a value
+# that is provably public (not a credential), and say why in the description.
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = """
+Public Claude Code OAuth client_id — NOT a secret. It is the well-known public
+client identifier for the Claude Code OAuth app, used in a secret-less PKCE
+flow (there is no client_secret), and ships as the default fallback in
+src/oauth.js. Documented as public in CLAUDE.md. Flagged by the heuristic
+generic-api-key rule only because it is a high-entropy UUID-shaped literal.
+"""
+# Match ONLY the literal client_id value, wherever it appears. Deliberately
+# narrow: we do NOT allowlist the whole src/oauth.js file, so a genuinely
+# secret value added there in future would still be flagged.
+regexes = [
+  '''9d1c250a-e61b-44d9-88ed-5944d1962f5e''',
+]

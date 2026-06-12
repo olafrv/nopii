@@ -18,6 +18,8 @@ Paths below are relative to the repository root.
 | `scripts/sync-node-pin.mjs` | Writes `package.json` `engines.node` from `.nvmrc` (the single source of truth for the Node version). Run via `pnpm run sync:node-pin` after editing `.nvmrc`. See `PNPM_SECURITY.md`. |
 | `scripts/check-deny-rules.mjs` | CI guard asserting the `PNPM_SECURITY.md` `Edit`/`Write` deny entries are still in `.claude/settings.json`. Run via `pnpm run check:deny-rules`. See `PNPM_SECURITY.md`. |
 | `Makefile` | `make wipe`: confirm-gated `git clean -fdx` removing all untracked/ignored artifacts (`node_modules/`, model weights, `datasets/`, caches, logs, tmp) plus container Claude state (`data/.claude*`), preserving `.env`, `OLAF.md`, and all git-tracked files (e.g. `.vscode/settings.json`, `data/.claude/.gitkeep`). `make help` lists targets. |
+| `.gitleaks.toml` | [gitleaks](https://github.com/gitleaks/gitleaks) config: keeps all default rules (`useDefault`) and narrowly allowlists the **public** Claude Code OAuth `client_id` (the lone, expected false positive). Run via `make scan` / `make scan-staged`. |
+| `.githooks/pre-commit` | Tracked git pre-commit hook that runs `make scan-staged` (gitleaks on staged changes) and aborts the commit on a finding. Enable per clone: `git config core.hooksPath .githooks`. Bypass: `git commit --no-verify`. |
 
 Note: `src/ner.js` resolves the model path relative to the **cwd** (project root), not
 the file — so always run from the project root (the `pnpm` scripts already do).

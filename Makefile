@@ -10,7 +10,7 @@
 # first.
 
 .DEFAULT_GOAL := help
-.PHONY: help wipe
+.PHONY: help wipe scan scan-staged
 
 # Untracked/ignored paths git clean must NOT remove (gitignore-style, anchored
 # to repo root). Tracked files are already safe — git clean never touches them.
@@ -18,12 +18,16 @@ WIPE_KEEP := -e /.env -e /OLAF.md
 
 help:
 	@echo "Targets:"
-	@echo "  wipe   Delete ALL git-untracked & gitignored files to rebuild from"
-	@echo "         scratch (node_modules, model weights, datasets, caches, logs,"
-	@echo "         tmp) plus container Claude state (data/.claude*). PRESERVES"
-	@echo "         .env and OLAF.md (and everything git-tracked). Prompts for"
-	@echo "         confirmation after listing the exact paths."
-	@echo "  help   Show this help (default)."
+	@echo "  scan         Scan the FULL git history for secrets with gitleaks"
+	@echo "               (honours .gitleaks.toml). Exits non-zero on a finding."
+	@echo "  scan-staged  Scan only staged changes (fast; what a pre-commit hook"
+	@echo "               runs). Blocks a commit that would introduce a secret."
+	@echo "  wipe         Delete ALL git-untracked & gitignored files to rebuild"
+	@echo "               from scratch (node_modules, model weights, datasets,"
+	@echo "               caches, logs, tmp) plus container Claude state"
+	@echo "               (data/.claude*). PRESERVES .env and OLAF.md (and"
+	@echo "               everything git-tracked). Confirms before deleting."
+	@echo "  help         Show this help (default)."
 
 wipe:
 	@files=$$(git clean -ndx $(WIPE_KEEP)); \
@@ -43,3 +47,19 @@ wipe:
 	fi; \
 	git clean -fdx $(WIPE_KEEP); \
 	echo "Done — wiped."
+
+# Secret scanning (gitleaks). Both targets honour .gitleaks.toml (which keeps
+# all default rules and allowlists only the public OAuth client_id).
+scan:
+	@command -v gitleaks >/dev/null 2>&1 || { \
+		echo "gitleaks not found — install it: brew install gitleaks"; \
+		exit 127; \
+	}
+	gitleaks detect --source . --log-opts="--all" --redact -v
+
+scan-staged:
+	@command -v gitleaks >/dev/null 2>&1 || { \
+		echo "gitleaks not found — install it: brew install gitleaks"; \
+		exit 127; \
+	}
+	gitleaks protect --staged --redact -v

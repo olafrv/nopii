@@ -1,0 +1,15 @@
+#!/bin/sh
+# nopii pre-commit hook — block commits that would introduce a secret.
+#
+# Activate once per clone (the hook itself is tracked, the activation is local):
+#
+#   git config core.hooksPath .githooks
+#
+# It scans only the staged changes via gitleaks (honouring .gitleaks.toml). A
+# non-zero exit aborts the commit. If gitleaks isn't installed the commit is
+# blocked with an install hint — fail closed, since the whole point is to not
+# let a secret slip through silently. To bypass in a genuine emergency:
+#
+#   git commit --no-verify
+#
+exec make scan-staged

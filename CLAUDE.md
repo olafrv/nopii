@@ -80,6 +80,9 @@ pnpm run oauth-login                 # one-time OAuth login (AUTH_MODE=oauth); w
                                      # NB: `pnpm login` is pnpm's npm-registry builtin — must use `run`
 make wipe                            # confirm-gated wipe of untracked/
                                      # ignored artifacts; keeps .env, OLAF.md
+make scan                            # gitleaks: scan FULL history for secrets
+make scan-staged                     # gitleaks: scan staged diff (pre-commit)
+git config core.hooksPath .githooks  # one-time/clone: enable pre-commit scan
 ```
 
 Run end-to-end: `ANTHROPIC_BASE_URL=http://localhost:8788 ANTHROPIC_API_KEY=sk-ant-... claude`

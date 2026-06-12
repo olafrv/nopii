@@ -320,6 +320,34 @@ make wipe       # list, confirm, then delete untracked/ignored artifacts
 Afterwards, re-run `pnpm install`, `pnpm run model:download`, and (if needed)
 `pnpm run dataset:download`.
 
+### Scan for committed secrets
+
+This repo ships a [gitleaks](https://github.com/gitleaks/gitleaks) config
+(`.gitleaks.toml`) that keeps all of gitleaks' default rules and narrowly
+allowlists only the **public** Claude Code OAuth `client_id` (a UUID-shaped
+literal that the heuristic rules flag, but which is not a secret — the flow is
+PKCE with no client secret). Install gitleaks (`brew install gitleaks`), then:
+
+```bash
+make scan          # scan the FULL git history for secrets
+make scan-staged   # scan only staged changes (fast; pre-commit use)
+```
+
+`make scan` exits non-zero if anything is found, so it doubles as a CI gate. To
+block secrets before they're committed, wire `make scan-staged` into a git
+pre-commit hook (see below).
+
+#### Pre-commit hook
+
+The robust, shareable option is a tracked git hook activated via
+`core.hooksPath` — it guards **every** commit, no matter who makes it or which
+tool they use:
+
+```bash
+git config core.hooksPath .githooks   # one-time, per clone
+# .githooks/pre-commit runs `make scan-staged` and aborts the commit on a leak
+```
+
 ## Deploy as a shared server
 
 ```bash
