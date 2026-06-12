@@ -206,7 +206,8 @@ at the root because Docker only reads it from the context root.
 plus a **masked token→value map** (e.g. `<PERSON_xxxxxxxx>: "S…n"` — only the first/last
 char of each value, via `maskValue` in `src/server.js`; never the full original).
 `DEBUG_UNMASK=true` (requires `DEBUG`) logs the **full** original values instead — a
-deliberate dev-only opt-in that leaks PII to logs (startup warns); never in prod. Auth: `AUTH_MODE` (`passthrough` default | `oauth`), `NOPII_CREDENTIALS_DIR`
+deliberate dev-only opt-in that leaks PII to logs (startup warns); never in prod.
+Auth: `AUTH_MODE` (`passthrough` default | `oauth`), `NOPII_CREDENTIALS_DIR`
 (default `~/.nopii`); OAuth internals overridable via `OAUTH_*` (`OAUTH_SCOPES`,
 `OAUTH_CALLBACK_PORT`, `OAUTH_REFRESH_LEAD_MS`, `OAUTH_CLIENT_ID`, `OAUTH_TOKEN_URL`,
 `OAUTH_AUTHORIZE_URL`).
