@@ -69,6 +69,13 @@ hook-based redaction design.
 
 ## Commands
 
+**Three runners, by task shape — don't consolidate them.** `pnpm run` =
+Node project tasks (dev/test/build/downloads/oauth); `Makefile` = short fixed
+ops recipes (`wipe`, `scan`/`scan-staged` — destructive `git clean` + the
+external `gitleaks` binary); `claude-nopii.sh` = a CLI dispatcher whose job is
+passing arbitrary args through to `claude` (`make` can't do that without
+breaking `--`/quoting). Each task lives in exactly one runner.
+
 ```bash
 corepack enable                      # provides pnpm (pinned in package.json)
 pnpm install --frozen-lockfile       # install deps (Node version in .nvmrc)
