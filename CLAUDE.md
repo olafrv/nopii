@@ -78,8 +78,8 @@ pnpm run leak-stats                  # recall/precision over ai4privacy dataset
 pnpm run check:deny-rules            # guard: PNPM_SECURITY.md deny entries present (CI)
 pnpm run oauth-login                 # one-time OAuth login (AUTH_MODE=oauth); writes ~/.nopii
                                      # NB: `pnpm login` is pnpm's npm-registry builtin — must use `run`
-make wipe                            # confirm-gated wipe of untracked/
-                                     # ignored artifacts; keeps .env, OLAF.md
+make wipe                            # confirm-gated wipe of untracked/ignored
+                                     # artifacts; keeps .env, OLAF.md
 make scan                            # gitleaks: scan FULL history for secrets
 make scan-staged                     # gitleaks: scan staged diff (pre-commit)
 git config core.hooksPath .githooks  # one-time/clone: enable pre-commit scan
