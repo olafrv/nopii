@@ -305,10 +305,11 @@ section, and concrete ways to improve the detection rate.
 ### Wipe regenerable artifacts
 
 To rebuild from a clean slate, `make wipe` deletes every git-untracked and
-gitignored path — `node_modules/`, the GLiNER weights, `datasets/`, caches, logs
-and tmp. It **preserves** `.env`, `OLAF.md` and the container's Claude auth state
-(`data/.claude*`), lists exactly what will be removed, and asks for confirmation
-before deleting. Nothing git-tracked is touched.
+gitignored path — `node_modules/`, the GLiNER weights, `datasets/`, caches, logs,
+tmp, and the container's generated Claude state (`data/.claude*`, re-created on
+next login). It **preserves** only `.env` (your secrets/config) and `OLAF.md`,
+lists exactly what will be removed, and asks for confirmation before deleting.
+Nothing git-tracked is touched (so `data/.claude/.gitkeep` survives).
 
 ```bash
 make            # show targets (default)
