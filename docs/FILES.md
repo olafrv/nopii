@@ -17,7 +17,7 @@ Paths below are relative to the repository root.
 | `scripts/download-dataset.mjs` | Fetches an ai4privacy PII split from Hugging Face into `datasets/` (mirrors the HF repo path), for the leak-stats benchmark. Run via `pnpm run dataset:download`. See `docs/LEAK_TEST.md`. |
 | `scripts/sync-node-pin.mjs` | Writes `package.json` `engines.node` from `.nvmrc` (the single source of truth for the Node version). Run via `pnpm run sync:node-pin` after editing `.nvmrc`. See `PNPM_SECURITY.md`. |
 | `scripts/check-deny-rules.mjs` | CI guard asserting the `PNPM_SECURITY.md` `Edit`/`Write` deny entries are still in `.claude/settings.json`. Run via `pnpm run check:deny-rules`. See `PNPM_SECURITY.md`. |
-| `Makefile` | `make wipe`: confirm-gated `git clean -fdx` removing all untracked/ignored artifacts (`node_modules/`, model weights, `datasets/`, caches, logs, tmp) plus container Claude state (`data/.claude*`), preserving `.env`, `OLAF.md`, `.vscode/` (and tracked files like `data/.claude/.gitkeep`). `make help` lists targets. |
+| `Makefile` | `make wipe`: confirm-gated `git clean -fdx` removing all untracked/ignored artifacts (`node_modules/`, model weights, `datasets/`, caches, logs, tmp) plus container Claude state (`data/.claude*`), preserving `.env`, `OLAF.md`, and all git-tracked files (e.g. `.vscode/settings.json`, `data/.claude/.gitkeep`). `make help` lists targets. |
 
 Note: `src/ner.js` resolves the model path relative to the **cwd** (project root), not
 the file — so always run from the project root (the `pnpm` scripts already do).

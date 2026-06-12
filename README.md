@@ -307,10 +307,10 @@ section, and concrete ways to improve the detection rate.
 To rebuild from a clean slate, `make wipe` deletes every git-untracked and
 gitignored path — `node_modules/`, the GLiNER weights, `datasets/`, caches, logs,
 tmp, and the container's generated Claude state (`data/.claude*`, re-created on
-next login). It **preserves** `.env` (your secrets/config), `OLAF.md`, and
-`.vscode/` (editor settings); lists exactly what will be removed; and asks for
-confirmation before deleting. Nothing git-tracked is touched (so
-`data/.claude/.gitkeep` survives).
+next login). It **preserves** `.env` (your secrets/config) and `OLAF.md`; lists
+exactly what will be removed; and asks for confirmation before deleting. Nothing
+git-tracked is touched either (so committed files like `.vscode/settings.json`
+and `data/.claude/.gitkeep` survive).
 
 ```bash
 make            # show targets (default)
