@@ -14,6 +14,9 @@ When you change the code, update the docs in the same task — don't leave them 
 - **`docs/INTERNALS.md`** — the developer's how-it-works guide: request lifecycle, redaction
   scope, detection, tokenization, rehydration, auth modes, failure semantics. When you
   change any of those behaviors, update the relevant section.
+- **`docs/LEAK_TEST.md`** — the leak-testing guide: the `pnpm test` CI gate vs the
+  `pnpm run leak-stats` benchmark, how to read recall/precision/F1. A change to
+  `test/leak-check.js`, `test/leak-stats.mjs`, or the label→type map → update here.
 
 Treat a PR that changes behavior without updating docs as incomplete.
 
@@ -28,8 +31,9 @@ code that shouldn't wrap in a terminal.)
 or `pnpm-workspace.yaml` change, then obey every rule.** A change that violates it must
 not be committed.
 
-This block is the agent-facing summary; `AGENTS.md` holds the canonical copy for
-all tools. Keep the two in sync.
+This block is the agent-facing summary; the canonical policy is `PNPM_SECURITY.md`.
+The same MANDATORY block (or a pointer to `PNPM_SECURITY.md`) must be present in
+every agent-instruction file that exists in the repo — see Self-propagation below.
 
 - **Core rules:** pnpm only (never `npm`/`yarn`), no `package-lock.json`, never
   `dangerouslyAllowAllBuilds`.

@@ -21,10 +21,13 @@ it can't be told to read a file it has no pointer to.) After the seed, the block
 below keeps every *other* instruction file in sync automatically (see
 "Self-propagation").
 
-**One-time bootstrap** — paste the block below into whichever file(s) your
-team's agents read. Prefer `AGENTS.md` as the canonical copy; in tool-specific
-files you may paste the block or just point at it ("Package management: obey
-`PNPM_SECURITY.md` and the policy block in `AGENTS.md`").
+**One-time bootstrap** — paste the block below into **every** agent-instruction
+file your team's agents read (see the table). There is no single "canonical"
+instruction file to sync the others against: `PNPM_SECURITY.md` is the one
+always-present source of truth, and each instruction file must carry the policy
+wherever it applies. A file may either paste the block in full or just point at
+the source ("Package management: obey `PNPM_SECURITY.md`"). The rule is simply:
+the statement is present in all agent-instruction files that exist.
 
 | Agent              | Instruction file                   |
 |--------------------|------------------------------------|
