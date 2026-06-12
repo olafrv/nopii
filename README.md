@@ -302,6 +302,22 @@ you change the entity set in `src/ner.js`.
 See [docs/LEAK_TEST.md](./docs/LEAK_TEST.md) for a sample run, how to read every
 section, and concrete ways to improve the detection rate.
 
+### Wipe regenerable artifacts
+
+To rebuild from a clean slate, `make wipe` deletes every git-untracked and
+gitignored path — `node_modules/`, the GLiNER weights, `datasets/`, caches, logs
+and tmp. It **preserves** `.env`, `OLAF.md` and the container's Claude auth state
+(`data/.claude*`), lists exactly what will be removed, and asks for confirmation
+before deleting. Nothing git-tracked is touched.
+
+```bash
+make            # show targets (default)
+make wipe       # list, confirm, then delete untracked/ignored artifacts
+```
+
+Afterwards, re-run `pnpm install`, `pnpm run model:download`, and (if needed)
+`pnpm run dataset:download`.
+
 ## Deploy as a shared server
 
 ```bash

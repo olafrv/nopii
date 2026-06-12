@@ -78,6 +78,8 @@ pnpm run leak-stats                  # recall/precision over ai4privacy dataset
 pnpm run check:deny-rules            # guard: PNPM_SECURITY.md deny entries present (CI)
 pnpm run oauth-login                 # one-time OAuth login (AUTH_MODE=oauth); writes ~/.nopii
                                      # NB: `pnpm login` is pnpm's npm-registry builtin — must use `run`
+make wipe                            # confirm-gated wipe of untracked/
+                                     # ignored artifacts; keeps .env, OLAF.md
 ```
 
 Run end-to-end: `ANTHROPIC_BASE_URL=http://localhost:8788 ANTHROPIC_API_KEY=sk-ant-... claude`
