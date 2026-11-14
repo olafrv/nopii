@@ -181,8 +181,14 @@ at the root because Docker only reads it from the context root.
   import `@xenova/transformers` directly (now a **direct** dep) only to set `env.cacheDir`
   → `GLINER_CACHE_DIR` (default `model/.cache`), so the cache lives under `model/`, not
   `node_modules`. First run still needs network for the tokenizer; offline thereafter.
-- `pnpm audit` flags vulns in `@xenova/transformers`; its network/model-download code is
-  not in the redaction request path.
+- **Security `overrides` in `pnpm-workspace.yaml`.** `@xenova/transformers@2.17.2` pins
+  `sharp ^0.32` and `onnx-proto@4.0.4` pins `protobufjs ^6`, both vulnerable, so we force
+  `sharp 0.35.5` and `protobufjs 7.6.6` via parent-scoped overrides (`pnpm audit` is clean
+  with them). Verified 2026-11-14: sharp image ops via `RawImage`, an `onnx-proto`
+  encode/decode round trip, tokenizer load, and `pnpm test` (same result as before the
+  overrides). Drop an override once its
+  parent allows a patched version. `pnpm install` doesn't re-resolve after editing
+  `overrides`; run `pnpm update <pkg> --depth Infinity` to apply.
 - **Detection tuning.** `GLINER_THRESHOLD` defaults to `0.5`; below ~0.4 GLiNER tags
   pronouns/common words ("I", "you", "hello", "user") as PERSON. `src/ner.js` also keeps a
   `STOPWORDS` denylist that drops those regardless of score (zero recall cost on real

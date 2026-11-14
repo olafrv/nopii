@@ -3,22 +3,25 @@
 minimumReleaseAge: 10080        # quarantine packages published < 7 days ago
 blockExoticSubdeps: true        # no git/tarball-URL transitive deps
 trustPolicy: no-downgrade       # reject packages whose trust level dropped
-# Known exception: protobufjs@6.11.6 is an old transitive dep
-# (@xenova/transformers -> onnxruntime-web -> onnx-proto). The "downgrade" is a
-# publish-date artifact (this old release predates trusted-publisher evidence),
-# not an incident. Scoped to the exact version so the policy stays strict.
-trustPolicyExclude:
-  - 'protobufjs@6.11.6'
 strictPeerDependencies: true    # surface incompatible/missing peers
 saveExact: true                 # pin exact versions on `pnpm add`
+
+# Security overrides for transitive deps whose parents pin vulnerable ranges.
+# Scoped to the parent so nothing else is forced. Drop each once the parent
+# allows a patched version.
+# - @xenova/transformers@2.17.2 wants sharp ^0.32 (Dependabot: < 0.35.5).
+# - onnx-proto@4.0.4 wants protobufjs ^6 (Dependabot: <= 7.5.5).
+overrides:
+  '@xenova/transformers>sharp': 0.35.5
+  'onnx-proto>protobufjs': 7.6.6
 
 # Dependency build (postinstall) scripts are blocked by default. This is a map
 # of package -> allow(true)/disallow(false). onnxruntime-node ships its native
 # .node/.dylib prebuilt in the tarball (no build needed), and protobufjs's
-# script is not required. sharp@0.32.6 must build its platform binding
-# (imported at load via @xenova/transformers), so it is allowed.
+# script is not required. sharp@0.35.x ships its platform binding prebuilt in
+# @img/sharp-* optional deps and has no install script, so it needs no build.
 # Never use dangerouslyAllowAllBuilds.
 allowBuilds:
-  sharp: true
+  sharp: false
   onnxruntime-node: false
   protobufjs: false
